@@ -10,6 +10,17 @@ CONFDIR="$HOME/.config/naver-vpn"
 CONF="$CONFDIR/config"
 mkdir -p "$CONFDIR"
 
+if [ -z "${C_RESET+x}" ]; then
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'
+    C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_CYAN=$'\033[36m'
+  else C_RESET=; C_BOLD=; C_DIM=; C_RED=; C_GREEN=; C_YELLOW=; C_CYAN=; fi
+fi
+okm(){  printf '%s✅ %s%s\n'  "$C_GREEN"  "$*" "$C_RESET"; }
+warn(){ printf '%s⚠️  %s%s\n' "$C_YELLOW" "$*" "$C_RESET"; }
+errm(){ printf '%s❌ %s%s\n'  "$C_RED"    "$*" "$C_RESET"; }
+info(){ printf '%sℹ️  %s%s\n' "$C_CYAN"   "$*" "$C_RESET"; }
+
 # 기존 설정 있으면 기본값으로 활용
 OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_TGT=""; OLD_ALIAS=""
 if [ -f "$CONF" ]; then
@@ -28,15 +39,15 @@ PROFD="$HOME/Library/Application Support/ncurion-sa-client/vpn/profiles"
 DETECTED_OVPN="$(ls -t "$PROFD"/*.ovpn 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || true)"
 DEF_OVPN="${OLD_OVPN:-${DETECTED_OVPN:-vpn2033.ovpn}}"
 if [ -z "${OLD_OVPN:-}" ] && [ -n "$DETECTED_OVPN" ]; then
-  echo "ℹ️  NAVER 앱 프로필에서 OVPN_NAME 자동 감지: $DETECTED_OVPN"
+  info "NAVER 앱 프로필에서 OVPN_NAME 자동 감지: $DETECTED_OVPN"
 elif [ -z "${OLD_OVPN:-}" ] && [ -z "$DETECTED_OVPN" ]; then
-  echo "⚠️  로컬에 .ovpn 프로필이 없습니다. NAVER Cloud SSL VPN 앱으로 한 번 로그인하면"
-  echo "    프로필이 받아지고 이름을 자동 감지할 수 있습니다. (계정별 식별자, 예: vpnXXXX.ovpn)"
+  warn "로컬에 .ovpn 프로필이 없습니다. NAVER Cloud SSL VPN 앱으로 한 번 로그인하면"
+  printf '    프로필이 받아지고 이름을 자동 감지할 수 있습니다. (계정별 식별자, 예: vpnXXXX.ovpn)\n'
 fi
 
-echo "==================== NAVER VPN 설정 ===================="
+printf '%s%s════════════════ NAVER VPN 설정 ════════════════%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
 read -r -p "VPN 아이디${OLD_USER:+ [$OLD_USER]}: " VU; VU="${VU:-$OLD_USER}"
-[ -n "$VU" ] || { echo "❌ 아이디는 필수입니다."; exit 1; }
+[ -n "$VU" ] || { errm "아이디는 필수입니다."; exit 1; }
 read -r -p "포털 도메인 [$DEF_DOM]: " DM; DM="${DM:-$DEF_DOM}"
 read -r -p "프로필 파일명 [$DEF_OVPN]: " OV; OV="${OV:-$DEF_OVPN}"
 read -r -p "연결확인 IP [$DEF_TGT]: " TG; TG="${TG:-$DEF_TGT}"
@@ -72,11 +83,11 @@ KEEPALIVE_HOST="$KAH"
 KEEPALIVE_FAILS="3"
 EOF
 chmod 600 "$CONF"
-echo "✅ 설정 저장: $CONF"
+okm "설정 저장: $CONF"
 echo
 
-echo "VPN 비밀번호를 키체인에 저장합니다 (입력은 화면에 보이지 않음, 두 번 입력)."
+printf '%sVPN 비밀번호를 키체인에 저장합니다%s (입력은 화면에 보이지 않음, 두 번 입력).\n' "$C_BOLD" "$C_RESET"
 security add-generic-password -U -s naver-vpn -a "$VU" -w
-echo "✅ 비밀번호 저장 완료 (키체인 서비스 'naver-vpn', 계정 '$VU')"
+okm "비밀번호 저장 완료 (키체인 서비스 'naver-vpn', 계정 '$VU')"
 echo
-echo "다음 단계: 'make install' (root 래퍼 + NOPASSWD 설치) 후  naver-vpn  으로 연결"
+printf '%s다음 단계:%s %smake install%s %s→%s  naver-vpn 으로 연결\n' "$C_BOLD" "$C_RESET" "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"

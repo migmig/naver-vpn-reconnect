@@ -7,10 +7,15 @@ SBINDIR="${2:-/usr/local/sbin}"
 SUDOERSD="${3:-/etc/sudoers.d}"
 CONF="$HOME/.config/naver-vpn/config"
 
-ok(){ printf "  \033[32m✔\033[0m %s\n" "$1"; }
-no(){ printf "  \033[31m✗\033[0m %s\n" "$1"; }
+if [ -z "${C_RESET+x}" ]; then
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_RED=$'\033[31m'; C_BOLD=$'\033[1m'
+  else C_RESET=; C_GREEN=; C_RED=; C_BOLD=; fi
+fi
+ok(){ printf "  %s✔%s %s\n" "$C_GREEN" "$C_RESET" "$1"; }
+no(){ printf "  %s✗%s %s\n" "$C_RED" "$C_RESET" "$1"; }
 
-echo "== 설치 상태 =="
+printf '%s== 설치 상태 ==%s\n' "$C_BOLD" "$C_RESET"
 [ -x "$BINDIR/naver-vpn" ] && ok "client    $BINDIR/naver-vpn" || no "client    미설치"
 [ -x "$BINDIR/naver-vpn-keepalive" ] && ok "keepalive $BINDIR/naver-vpn-keepalive" || no "keepalive 미설치"
 AL="$( . "$HOME/.config/naver-vpn/config" 2>/dev/null; echo "${ALIAS:-}" )"
@@ -22,7 +27,7 @@ fi
 [ -x "$SBINDIR/naver-vpn-up" ] && ok "wrapper   $SBINDIR/naver-vpn-up" || no "wrapper   미설치"
 [ -f "$SUDOERSD/naver-vpn" ] && ok "sudoers   $SUDOERSD/naver-vpn (NOPASSWD)" || no "sudoers   미설치 (연결 시 비번 필요)"
 
-echo "== 설정 =="
+printf '%s== 설정 ==%s\n' "$C_BOLD" "$C_RESET"
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
   . "$CONF" 2>/dev/null || true
@@ -36,7 +41,7 @@ else
   no "config    없음 (make setup)"
 fi
 
-echo "== 연결 =="
+printf '%s== 연결 ==%s\n' "$C_BOLD" "$C_RESET"
 TGT="${TARGET:-10.0.0.4}"
 if ifconfig 2>/dev/null | grep -q "inet ${TGT} "; then
   ok "tunnel    $TGT 활성"

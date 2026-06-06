@@ -15,18 +15,32 @@ REALUSER  := $(if $(SUDO_USER),$(SUDO_USER),$(shell id -un))
 HOMEDIR   := $(shell eval echo ~$(REALUSER))
 CONFDIR   := $(HOMEDIR)/.config/naver-vpn
 
+# ---- 색 (NO_COLOR 환경변수면 비활성) ----
+ifeq ($(strip $(NO_COLOR)),)
+  C_RESET  := $(shell printf '\033[0m')
+  C_BOLD   := $(shell printf '\033[1m')
+  C_DIM    := $(shell printf '\033[2m')
+  C_RED    := $(shell printf '\033[31m')
+  C_GREEN  := $(shell printf '\033[32m')
+  C_YELLOW := $(shell printf '\033[33m')
+  C_BLUE   := $(shell printf '\033[34m')
+  C_CYAN   := $(shell printf '\033[36m')
+endif
+export C_RESET C_BOLD C_DIM C_RED C_GREEN C_YELLOW C_BLUE C_CYAN
+
 .DEFAULT_GOAL := help
 
 help:
-	@echo "NAVER VPN 재연결 — 사용 가능한 명령:"
-	@echo "  make setup      대화형 설정 (아이디 + 키체인 비밀번호)"
-	@echo "  make install    설치 (클라이언트 + root 래퍼 + NOPASSWD)   [sudo]"
-	@echo "  make uninstall  제거 (설정/키체인 유지)                    [sudo]"
-	@echo "  make purge      완전 삭제 (설정/키체인 포함)               [sudo]"
-	@echo "  make status     상태 확인"
-	@echo "  make doc        README.html 생성"
-	@echo ""
-	@echo "처음이라면:  make setup  →  make install  →  naver-vpn"
+	@printf '\n  $(C_BOLD)$(C_CYAN)NAVER Cloud SSL VPN 재연결$(C_RESET)\n'
+	@printf '  $(C_DIM)터미널에서 재연결 · 키체인 비번 · 문자 OTP · keepalive$(C_RESET)\n\n'
+	@printf '  $(C_BOLD)사용 가능한 명령$(C_RESET)\n'
+	@printf '    $(C_GREEN)make setup$(C_RESET)      대화형 설정 (아이디 + 키체인 비밀번호)\n'
+	@printf '    $(C_GREEN)make install$(C_RESET)    설치 (클라이언트 + 래퍼 + NOPASSWD)   $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '    $(C_GREEN)make uninstall$(C_RESET)  제거 (설정/키체인 유지)               $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '    $(C_GREEN)make purge$(C_RESET)      완전 삭제 (설정/키체인 포함)          $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '    $(C_GREEN)make status$(C_RESET)     상태 확인\n'
+	@printf '    $(C_GREEN)make doc$(C_RESET)        README.html 생성\n\n'
+	@printf '  $(C_BOLD)처음이라면$(C_RESET)  $(C_CYAN)make setup$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)make install$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)naver-vpn$(C_RESET)\n\n'
 
 # ---- 설정 (root 불필요) ----
 setup:
@@ -48,14 +62,14 @@ uninstall:
 
 # ---- 완전 삭제 ----
 purge: uninstall
-	@echo "==> 설정/키체인 삭제"
+	@printf '$(C_BLUE)==>$(C_RESET) 설정/키체인 삭제\n'
 	@if [ -f $(CONFDIR)/config ]; then \
 	  . $(CONFDIR)/config 2>/dev/null; \
 	  security delete-generic-password -s "$${KC_SERVICE:-naver-vpn}" -a "$$VPN_USER" >/dev/null 2>&1 \
-	    && echo "   키체인 항목 삭제됨" || true; \
+	    && printf '    키체인 항목 삭제됨\n' || true; \
 	fi
 	rm -rf $(CONFDIR)
-	@echo "✅ 완전 삭제 완료"
+	@printf '$(C_GREEN)✅ 완전 삭제 완료$(C_RESET)\n'
 
 # ---- 상태 ----
 status:
@@ -69,6 +83,6 @@ README.html: README.md tools/md2html.py
 	else \
 	  python3 tools/md2html.py README.md README.html; \
 	fi
-	@echo "✅ README.html 생성됨"
+	@printf '$(C_GREEN)✅ README.html 생성됨$(C_RESET)\n'
 
 .PHONY: help setup install uninstall purge status doc

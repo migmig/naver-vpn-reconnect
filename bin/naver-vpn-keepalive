@@ -26,6 +26,12 @@ PIDFILE="$STATEDIR/keepalive.pid"
 LOG="$STATEDIR/keepalive.log"
 mkdir -p "$STATEDIR"
 
+if [ -z "${C_RESET+x}" ]; then
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_DIM=$'\033[2m'
+  else C_RESET=; C_GREEN=; C_DIM=; fi
+fi
+
 SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 ts(){ date '+%Y-%m-%d %H:%M:%S'; }
 alive(){ [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; }
@@ -38,15 +44,15 @@ case "$cmd" in
     nohup "$SELF" run >>"$LOG" 2>&1 &
     echo $! > "$PIDFILE"
     disown 2>/dev/null || true
-    echo "✅ keepalive 시작 (pid $(cat "$PIDFILE"), ${INTERVAL}s 마다 $HOST 핑)"
+    printf '%s✅ keepalive 시작%s (pid %s, %ss 마다 %s 핑)\n' "$C_GREEN" "$C_RESET" "$(cat "$PIDFILE")" "$INTERVAL" "$HOST"
     ;;
   stop)
-    if alive; then kill "$(cat "$PIDFILE")" 2>/dev/null || true; rm -f "$PIDFILE"; echo "✅ keepalive 중지"; \
+    if alive; then kill "$(cat "$PIDFILE")" 2>/dev/null || true; rm -f "$PIDFILE"; printf '%s✅ keepalive 중지%s\n' "$C_GREEN" "$C_RESET"; \
     else echo "keepalive 실행중 아님"; rm -f "$PIDFILE"; fi
     ;;
   status)
-    if alive; then echo "● 실행중 (pid $(cat "$PIDFILE"), ${INTERVAL}s → $HOST)"; \
-    else echo "○ 중지됨"; fi
+    if alive; then printf '%s● 실행중%s (pid %s, %ss → %s)\n' "$C_GREEN" "$C_RESET" "$(cat "$PIDFILE")" "$INTERVAL" "$HOST"; \
+    else printf '%s○ 중지됨%s\n' "$C_DIM" "$C_RESET"; fi
     ;;
   run)
     echo "[$(ts)] keepalive 시작: ${INTERVAL}s 마다 $HOST 핑 (연속 ${MAXFAILS}회 실패 시 종료)"

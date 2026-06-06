@@ -14,7 +14,14 @@ HOMEDIR="${HOMEDIR:-$(eval echo ~"$REALUSER")}"
 CONFDIR="${CONFDIR:-$HOMEDIR/.config/naver-vpn}"
 CONF="$CONFDIR/config"
 
-echo "==> 설치물 제거"
+if [ -z "${C_RESET+x}" ]; then
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_BLUE=$'\033[34m'
+  else C_RESET=; C_GREEN=; C_BLUE=; fi
+fi
+hdr(){ printf '%s==>%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
+
+hdr "설치물 제거"
 
 # keepalive 중지
 command -v naver-vpn-keepalive >/dev/null 2>&1 && naver-vpn-keepalive stop >/dev/null 2>&1 || true
@@ -32,4 +39,4 @@ done
 sudo rm -f "$BINDIR/naver-vpn" "$BINDIR/naver-vpn-keepalive" \
            "$SBINDIR/naver-vpn-up" "$SUDOERSD/naver-vpn"
 
-echo "✅ 제거 완료 (설정 $CONFDIR, 키체인은 유지). 완전삭제: make purge"
+printf '%s✅ 제거 완료%s (설정 %s, 키체인은 유지). 완전삭제: make purge\n' "$C_GREEN" "$C_RESET" "$CONFDIR"
