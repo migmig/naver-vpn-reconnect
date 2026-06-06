@@ -97,6 +97,45 @@ make install ALIAS=-      # 별칭 없이 (naver-vpn 만)</code></pre>
 <p>문자가 이미 도착해 있으면 한 번에:</p>
 <pre><code>vpn 204767</code></pre>
 <hr>
+<h2>화면 예시</h2>
+<p>실제 출력은 색이 입혀져 나온다(터미널 기준; 파이프하거나 <code>NO_COLOR=1</code> 이면 색 제거).</p>
+<p><code>make</code> (인자 없이) — 명령 안내:</p>
+<pre><code>╭─ 📡 NAVER Cloud SSL VPN 재연결 ──────────────
+│  터미널 재연결 · 키체인 비번 · 문자 OTP · keepalive
+│
+│  📋 명령
+│    🔧 make setup      대화형 설정 (아이디 + 키체인 비번)
+│    📦 make install    설치 (클라이언트 + 래퍼 + NOPASSWD)  [sudo]
+│    🧹 make uninstall  제거 (설정/키체인 유지)  [sudo]
+│    💥 make purge      완전 삭제 (설정/키체인 포함)  [sudo]
+│    📊 make status     설치/연결 상태 확인
+│    📄 make doc        README.html 생성
+│
+├──────────────────────────────────────────────
+│  ▶ 처음이라면  make setup → make install → naver-vpn
+╰──────────────────────────────────────────────</code></pre>
+<p><code>make status</code> — 설치/연결 상태:</p>
+<pre><code>╭─ 📡 NAVER Cloud SSL VPN — 상태 ──────────────
+│
+│  📦 설치
+│    ✅  client     /usr/local/bin/naver-vpn
+│    ✅  keepalive  /usr/local/bin/naver-vpn-keepalive
+│    ✅  alias      vpn → naver-vpn
+│    ✅  wrapper    /usr/local/sbin/naver-vpn-up
+│    ✅  sudoers    NOPASSWD /etc/sudoers.d/naver-vpn
+│
+│  ⚙️ 설정
+│    ✅  config     user=migmig01  ovpn=vpn2033.ovpn
+│    ✅  keychain   비밀번호 저장됨
+│
+│  🌐 연결
+│    ✅  tunnel     10.0.0.4 활성
+│    ✅  keepalive  실행중 pid 12140 · 60s → 10.0.0.1
+│
+├──────────────────────────────────────────────
+│  🟢 VPN 연결됨
+╰──────────────────────────────────────────────</code></pre>
+<hr>
 <h2>Make 명령 요약</h2>
 <table><thead><tr><th>명령</th><th>설명</th></tr></thead><tbody><tr><td><code>make setup</code></td><td>대화형 설정 — 아이디/도메인/프로필 + 키체인 비밀번호 저장 (sudo 불필요)</td></tr><tr><td><code>make install</code></td><td>클라이언트·래퍼·sudoers 설치 (필요 시 sudo 호출)</td></tr><tr><td><code>make uninstall</code></td><td>설치물 제거 (설정·키체인은 <strong>유지</strong>)</td></tr><tr><td><code>make purge</code></td><td><code>uninstall</code> + 설정파일·키체인 항목까지 삭제</td></tr><tr><td><code>make status</code></td><td>설치/설정/연결 상태 출력</td></tr><tr><td><code>make doc</code></td><td><code>README.md</code> → <code>README.html</code> 변환</td></tr><tr><td><code>make help</code></td><td>명령 목록</td></tr></tbody></table>
 <p>비밀번호만 다시 바꾸려면:</p>

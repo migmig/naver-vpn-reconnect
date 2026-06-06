@@ -177,6 +177,56 @@ vpn 204767
 
 ---
 
+## 화면 예시
+
+실제 출력은 색이 입혀져 나온다(터미널 기준; 파이프하거나 `NO_COLOR=1` 이면 색 제거).
+
+`make` (인자 없이) — 명령 안내:
+
+```text
+╭─ 📡 NAVER Cloud SSL VPN 재연결 ──────────────
+│  터미널 재연결 · 키체인 비번 · 문자 OTP · keepalive
+│
+│  📋 명령
+│    🔧 make setup      대화형 설정 (아이디 + 키체인 비번)
+│    📦 make install    설치 (클라이언트 + 래퍼 + NOPASSWD)  [sudo]
+│    🧹 make uninstall  제거 (설정/키체인 유지)  [sudo]
+│    💥 make purge      완전 삭제 (설정/키체인 포함)  [sudo]
+│    📊 make status     설치/연결 상태 확인
+│    📄 make doc        README.html 생성
+│
+├──────────────────────────────────────────────
+│  ▶ 처음이라면  make setup → make install → naver-vpn
+╰──────────────────────────────────────────────
+```
+
+`make status` — 설치/연결 상태:
+
+```text
+╭─ 📡 NAVER Cloud SSL VPN — 상태 ──────────────
+│
+│  📦 설치
+│    ✅  client     /usr/local/bin/naver-vpn
+│    ✅  keepalive  /usr/local/bin/naver-vpn-keepalive
+│    ✅  alias      vpn → naver-vpn
+│    ✅  wrapper    /usr/local/sbin/naver-vpn-up
+│    ✅  sudoers    NOPASSWD /etc/sudoers.d/naver-vpn
+│
+│  ⚙️ 설정
+│    ✅  config     user=migmig01  ovpn=vpn2033.ovpn
+│    ✅  keychain   비밀번호 저장됨
+│
+│  🌐 연결
+│    ✅  tunnel     10.0.0.4 활성
+│    ✅  keepalive  실행중 pid 12140 · 60s → 10.0.0.1
+│
+├──────────────────────────────────────────────
+│  🟢 VPN 연결됨
+╰──────────────────────────────────────────────
+```
+
+---
+
 ## Make 명령 요약
 
 | 명령 | 설명 |
