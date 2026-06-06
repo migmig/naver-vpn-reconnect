@@ -15,24 +15,31 @@ if [ -z "${C_RESET+x}" ]; then
   else C_RESET=; C_BOLD=; C_DIM=; C_RED=; C_GREEN=; C_YELLOW=; C_CYAN=; fi
 fi
 
-LW=10   # 라벨 폭(ASCII)
-sec(){ printf '\n%s%s▸ %s%s\n' "$C_BOLD" "$C_CYAN" "$1" "$C_RESET"; }
+LW=10
+RULE='──────────────────────────────────────────────'
+
+bar(){  printf '%s│%s\n' "$C_DIM" "$C_RESET"; }                       # 빈 세로줄
+top(){  printf '\n%s╭─%s %s📡 NAVER Cloud SSL VPN — 상태%s %s%s%s\n' \
+          "$C_DIM" "$C_RESET" "$C_BOLD$C_CYAN" "$C_RESET" "$C_DIM" "${RULE:0:14}" "$C_RESET"; }
+mid(){  printf '%s├%s%s\n' "$C_DIM" "$RULE" "$C_RESET"; }
+bot(){  printf '%s╰%s%s\n\n' "$C_DIM" "$RULE" "$C_RESET"; }
+sec(){  bar; printf '%s│%s  %s%s %s%s\n' "$C_DIM" "$C_RESET" "$C_BOLD$C_CYAN" "$1" "$2" "$C_RESET"; }
 # row <ok|warn|no> <label> <value>
 row(){
-  local g c
+  local g
   case "$1" in
-    ok)   g='✔'; c="$C_GREEN"  ;;
-    warn) g='!'; c="$C_YELLOW" ;;
-    *)    g='✗'; c="$C_RED"    ;;
+    ok)   g='✅' ;;
+    warn) g='⚠️ ' ;;
+    *)    g='❌' ;;
   esac
-  printf '   %s%s%s  %s%-*s%s %s\n' "$c" "$g" "$C_RESET" "$C_DIM" "$LW" "$2" "$C_RESET" "$3"
+  printf '%s│%s    %s  %s%-*s%s %s\n' "$C_DIM" "$C_RESET" "$g" "$C_DIM" "$LW" "$2" "$C_RESET" "$3"
 }
-dimp(){ printf '%s%s%s' "$C_DIM" "$1" "$C_RESET"; }   # 경로 등 흐리게
+dimp(){ printf '%s%s%s' "$C_DIM" "$1" "$C_RESET"; }
 
-printf '\n %s%s NAVER Cloud SSL VPN — 상태 %s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+top
 
 # ===== 설치 =====
-sec "설치"
+sec "📦" "설치"
 [ -x "$BINDIR/naver-vpn" ]           && row ok   "client"    "$(dimp "$BINDIR/naver-vpn")"           || row no   "client"    "미설치"
 [ -x "$BINDIR/naver-vpn-keepalive" ] && row ok   "keepalive" "$(dimp "$BINDIR/naver-vpn-keepalive")" || row no   "keepalive" "미설치"
 AL="$( . "$CONF" 2>/dev/null; echo "${ALIAS:-}" )"
@@ -41,11 +48,11 @@ if [ -n "$AL" ] && [ -L "$BINDIR/$AL" ] && [ "$(readlink "$BINDIR/$AL")" = "nave
 else
   row warn "alias"     "없음 $(dimp "(make install 에서 지정)")"
 fi
-[ -x "$SBINDIR/naver-vpn-up" ]       && row ok   "wrapper"   "$(dimp "$SBINDIR/naver-vpn-up")"       || row no   "wrapper"   "미설치"
+[ -x "$SBINDIR/naver-vpn-up" ]       && row ok   "wrapper"   "$(dimp "$SBINDIR/naver-vpn-up")"        || row no   "wrapper"   "미설치"
 [ -f "$SUDOERSD/naver-vpn" ]         && row ok   "sudoers"   "NOPASSWD $(dimp "$SUDOERSD/naver-vpn")" || row warn "sudoers"   "미설치 $(dimp "(연결 시 맥 비번 필요)")"
 
 # ===== 설정 =====
-sec "설정"
+sec "⚙️" "설정"
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
   . "$CONF" 2>/dev/null || true
@@ -60,7 +67,7 @@ else
 fi
 
 # ===== 연결 =====
-sec "연결"
+sec "🌐" "연결"
 TGT="${TARGET:-10.0.0.4}"
 CONNECTED=0
 if ifconfig 2>/dev/null | grep -q "inet ${TGT} "; then
@@ -78,8 +85,10 @@ else
 fi
 
 # ===== 요약 =====
+bar; mid
 if [ "$CONNECTED" = 1 ]; then
-  printf '\n %s● VPN 연결됨%s\n\n' "$C_GREEN" "$C_RESET"
+  printf '%s│%s  %s🟢 VPN 연결됨%s\n' "$C_DIM" "$C_RESET" "$C_GREEN$C_BOLD" "$C_RESET"
 else
-  printf '\n %s○ VPN 연결 안됨%s  %s→ naver-vpn 으로 연결%s\n\n' "$C_RED" "$C_RESET" "$C_DIM" "$C_RESET"
+  printf '%s│%s  %s🔴 VPN 연결 안됨%s  %s→ naver-vpn 으로 연결%s\n' "$C_DIM" "$C_RESET" "$C_RED$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
 fi
+bot
