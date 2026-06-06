@@ -19,8 +19,19 @@ if [ -f "$CONF" ]; then
 fi
 
 DEF_DOM="${OLD_DOM:-https://sslvpn-kr-vpc-01.gov-ncloud.com:8443}"
-DEF_OVPN="${OLD_OVPN:-vpn2033.ovpn}"
 DEF_TGT="${OLD_TGT:-10.0.0.4}"
+
+# 프로필 이름(OVPN_NAME)은 계정별 식별자다. 기존 설정 → NAVER 앱이 받아둔
+# 로컬 프로필 → 마지막 폴백 순으로 기본값을 정한다.
+PROFD="$HOME/Library/Application Support/ncurion-sa-client/vpn/profiles"
+DETECTED_OVPN="$(ls -t "$PROFD"/*.ovpn 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || true)"
+DEF_OVPN="${OLD_OVPN:-${DETECTED_OVPN:-vpn2033.ovpn}}"
+if [ -z "${OLD_OVPN:-}" ] && [ -n "$DETECTED_OVPN" ]; then
+  echo "ℹ️  NAVER 앱 프로필에서 OVPN_NAME 자동 감지: $DETECTED_OVPN"
+elif [ -z "${OLD_OVPN:-}" ] && [ -z "$DETECTED_OVPN" ]; then
+  echo "⚠️  로컬에 .ovpn 프로필이 없습니다. NAVER Cloud SSL VPN 앱으로 한 번 로그인하면"
+  echo "    프로필이 받아지고 이름을 자동 감지할 수 있습니다. (계정별 식별자, 예: vpnXXXX.ovpn)"
+fi
 
 echo "==================== NAVER VPN 설정 ===================="
 read -r -p "VPN 아이디${OLD_USER:+ [$OLD_USER]}: " VU; VU="${VU:-$OLD_USER}"

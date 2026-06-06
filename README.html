@@ -67,6 +67,15 @@ naver-vpn-keepalive start     # 수동 시작</code></pre>
 <hr>
 <h2>요구 사항</h2>
 <ul><li>macOS</li><li><strong>NAVER Cloud SSL VPN.app</strong> 설치 (<code>/Applications/</code> — 내부의 <code>openvpn</code> 바이너리를 사용)</li><li><code>jq</code>, <code>curl</code> (<code>brew install jq</code>)</li><li>관리자(sudo) 권한 — 설치 시 1회</li></ul>
+<h3>프로필 이름(<code>OVPN_NAME</code>)에 대해 — 중요</h3>
+<p><code>.ovpn</code> 프로필 <strong>파일</strong> 자체는 의존성이 아니다. 클라이언트는 매번 서버 응답(<code>profile_body</code>)에서<br>프로필을 새로 받아 저장하므로, 저장소에 프로필을 넣을 필요가 없다(넣지도 않는다).</p>
+<p>다만 <strong><code>OVPN_NAME</code>(예: <code>vpn2033.ovpn</code>)은 계정/테넌트별 식별자</strong>다. v3 <code>authstate</code> 요청의<br><code>ovpn_file_name</code> 으로 전송되어 서버가 어떤 VPN 프로필을 줄지 결정한다. 따라서 **다른 계정/환경에서는<br>이 값이 다르며**, 저장소의 기본값을 그대로 쓰면 접속되지 않을 수 있다.</p>
+<p>이 이름은 <strong>NAVER Cloud SSL VPN 앱이 로그인 시 받아 저장</strong>한다. 그래서:</p>
+<ul><li><code>make setup</code> 은 <code>~/Library/Application Support/ncurion-sa-client/vpn/profiles/*.ovpn</code> 에서</li></ul>
+<p>  <strong>OVPN_NAME 을 자동 감지</strong>해 기본값으로 제시한다.</p>
+<ul><li>새 기기라면 <strong>NAVER 앱으로 한 번 로그인</strong>해 프로필을 받은 뒤 <code>make setup</code> 을 실행하면 된다.</li></ul>
+<p>  (앱은 어차피 <code>openvpn</code> 바이너리 때문에 필요하다.)</p>
+<ul><li>이름을 이미 안다면 <code>make setup</code> 에서 직접 입력해도 된다.</li></ul>
 <hr>
 <h2>설치</h2>
 <pre><code>cd ~/work/naver-vpn

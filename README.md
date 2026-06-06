@@ -104,6 +104,23 @@ naver-vpn-keepalive start     # 수동 시작
 - `jq`, `curl` (`brew install jq`)
 - 관리자(sudo) 권한 — 설치 시 1회
 
+### 프로필 이름(`OVPN_NAME`)에 대해 — 중요
+
+`.ovpn` 프로필 **파일** 자체는 의존성이 아니다. 클라이언트는 매번 서버 응답(`profile_body`)에서
+프로필을 새로 받아 저장하므로, 저장소에 프로필을 넣을 필요가 없다(넣지도 않는다).
+
+다만 **`OVPN_NAME`(예: `vpn2033.ovpn`)은 계정/테넌트별 식별자**다. v3 `authstate` 요청의
+`ovpn_file_name` 으로 전송되어 서버가 어떤 VPN 프로필을 줄지 결정한다. 따라서 **다른 계정/환경에서는
+이 값이 다르며**, 저장소의 기본값을 그대로 쓰면 접속되지 않을 수 있다.
+
+이 이름은 **NAVER Cloud SSL VPN 앱이 로그인 시 받아 저장**한다. 그래서:
+
+- `make setup` 은 `~/Library/Application Support/ncurion-sa-client/vpn/profiles/*.ovpn` 에서
+  **OVPN_NAME 을 자동 감지**해 기본값으로 제시한다.
+- 새 기기라면 **NAVER 앱으로 한 번 로그인**해 프로필을 받은 뒤 `make setup` 을 실행하면 된다.
+  (앱은 어차피 `openvpn` 바이너리 때문에 필요하다.)
+- 이름을 이미 안다면 `make setup` 에서 직접 입력해도 된다.
+
 ---
 
 ## 설치
