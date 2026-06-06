@@ -31,16 +31,20 @@ export C_RESET C_BOLD C_DIM C_RED C_GREEN C_YELLOW C_BLUE C_CYAN
 .DEFAULT_GOAL := help
 
 help:
-	@printf '\n  $(C_BOLD)$(C_CYAN)NAVER Cloud SSL VPN 재연결$(C_RESET)\n'
-	@printf '  $(C_DIM)터미널에서 재연결 · 키체인 비번 · 문자 OTP · keepalive$(C_RESET)\n\n'
-	@printf '  $(C_BOLD)사용 가능한 명령$(C_RESET)\n'
-	@printf '    $(C_GREEN)make setup$(C_RESET)      대화형 설정 (아이디 + 키체인 비밀번호)\n'
-	@printf '    $(C_GREEN)make install$(C_RESET)    설치 (클라이언트 + 래퍼 + NOPASSWD)   $(C_YELLOW)[sudo]$(C_RESET)\n'
-	@printf '    $(C_GREEN)make uninstall$(C_RESET)  제거 (설정/키체인 유지)               $(C_YELLOW)[sudo]$(C_RESET)\n'
-	@printf '    $(C_GREEN)make purge$(C_RESET)      완전 삭제 (설정/키체인 포함)          $(C_YELLOW)[sudo]$(C_RESET)\n'
-	@printf '    $(C_GREEN)make status$(C_RESET)     상태 확인\n'
-	@printf '    $(C_GREEN)make doc$(C_RESET)        README.html 생성\n\n'
-	@printf '  $(C_BOLD)처음이라면$(C_RESET)  $(C_CYAN)make setup$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)make install$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)naver-vpn$(C_RESET)\n\n'
+	@printf '\n$(C_DIM)╭─$(C_RESET) $(C_BOLD)$(C_CYAN)📡 NAVER Cloud SSL VPN 재연결$(C_RESET) $(C_DIM)──────────────$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)  $(C_DIM)터미널 재연결 · 키체인 비번 · 문자 OTP · keepalive$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)  $(C_BOLD)$(C_CYAN)📋 명령$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)    🔧 $(C_GREEN)make setup$(C_RESET)      대화형 설정 (아이디 + 키체인 비번)\n'
+	@printf '$(C_DIM)│$(C_RESET)    📦 $(C_GREEN)make install$(C_RESET)    설치 (클라이언트 + 래퍼 + NOPASSWD)  $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)    🧹 $(C_GREEN)make uninstall$(C_RESET)  제거 (설정/키체인 유지)  $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)    💥 $(C_GREEN)make purge$(C_RESET)      완전 삭제 (설정/키체인 포함)  $(C_YELLOW)[sudo]$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)    📊 $(C_GREEN)make status$(C_RESET)     설치/연결 상태 확인\n'
+	@printf '$(C_DIM)│$(C_RESET)    📄 $(C_GREEN)make doc$(C_RESET)        README.html 생성\n'
+	@printf '$(C_DIM)│$(C_RESET)\n'
+	@printf '$(C_DIM)├──────────────────────────────────────────────$(C_RESET)\n'
+	@printf '$(C_DIM)│$(C_RESET)  $(C_BOLD)▶ 처음이라면$(C_RESET)  $(C_CYAN)make setup$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)make install$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)naver-vpn$(C_RESET)\n'
+	@printf '$(C_DIM)╰──────────────────────────────────────────────$(C_RESET)\n\n'
 
 # ---- 설정 (root 불필요) ----
 setup:
