@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# naver-vpn-up — NAVER VPN 재연결용 root 래퍼 (프로젝트가 자동 설치)
+#
+# 이 파일은 root 소유로 /usr/local/sbin 에 설치되고, /etc/sudoers.d/naver-vpn 에서
+# NOPASSWD 권한을 받는다. 하는 일은 딱 두 가지뿐:
+#   1) 기존 NAVER openvpn 세션 종료
+#   2) (사용자 프로필 디렉토리의) 지정 .ovpn + 인증파일로 openvpn 실행
+#
+# 인자:
+#   $1 = 프로필 파일명 (basename, 예: vpn2033.ovpn — 슬래시/공백 불가)
+#   $2 = 인증파일 경로 (/tmp/naver-vpn-auth.* )
+#
+# openvpn 설정 디렉토리를 코드에 고정하므로, 이 NOPASSWD 권한으로는 임의의
+# openvpn 설정(=--up 스크립트로 root 명령 실행)을 돌릴 수 없다.
+# 절대 직접 수정하지 말 것 — 'make install' 로 재생성된다 (@HOME@ 치환).
+#
+set -eu
+
+NAME="${1:-}"
+AUTH="${2:-}"
+OVPN="/Applications/NAVER Cloud SSL VPN.app/Contents/vpn/openvpn"
+PROFDIR="@HOME@/Library/Application Support/ncurion-sa-client/vpn/profiles"
+LOG="@HOME@/Library/Application Support/ncurion-sa-client/vpn/vpn.log"
+
+# 프로필 파일명 검증: 슬래시 없음 + .ovpn 으로 끝남
+case "$NAME" in
+  */*|"") echo "naver-vpn-up: invalid profile name" >&2; exit 1 ;;
+  *.ovpn) ;;
+  *) echo "naver-vpn-up: profile must end with .ovpn" >&2; exit 1 ;;
+esac
+# 인증파일은 스크립트가 만든 임시파일이어야 함
+case "$AUTH" in
+  /tmp/naver-vpn-auth.*) ;;
+  *) echo "naver-vpn-up: invalid auth path" >&2; exit 1 ;;
+esac
+
+CONFIG="$PROFDIR/$NAME"
+[ -f "$CONFIG" ] || { echo "naver-vpn-up: config not found: $CONFIG" >&2; exit 1; }
+[ -f "$AUTH" ]   || { echo "naver-vpn-up: auth file not found" >&2; exit 1; }
+[ -x "$OVPN" ]   || { echo "naver-vpn-up: openvpn not found" >&2; exit 1; }
+
+pkill -f 'vpn/openvpn' 2>/dev/null || true
+sleep 1
+exec "$OVPN" --config "$CONFIG" --auth-user-pass "$AUTH" --auth-nocache --daemon --log "$LOG"

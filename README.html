@@ -1,0 +1,123 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NAVER VPN Reconnect</title><style>
+:root{color-scheme:light dark}
+body{max-width:860px;margin:40px auto;padding:0 20px;
+ font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo",sans-serif;
+ color:#24292f;background:#fff}
+@media(prefers-color-scheme:dark){body{color:#c9d1d9;background:#0d1117}
+ code,pre{background:#161b22 !important}a{color:#58a6ff}th{background:#161b22}}
+h1,h2,h3{font-weight:700;line-height:1.25;margin:1.4em 0 .6em;border-bottom:1px solid #d8dee4;padding-bottom:.3em}
+h1{font-size:2em}h2{font-size:1.5em}h3{font-size:1.2em;border-bottom:none}
+code{background:#f3f4f6;padding:.15em .4em;border-radius:6px;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:#f6f8fa;padding:14px 16px;border-radius:8px;overflow:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;margin:1em 0;width:100%}
+th,td{border:1px solid #d0d7de;padding:6px 12px;text-align:left}
+th{background:#f6f8fa}
+blockquote{margin:1em 0;padding:.4em 1em;border-left:4px solid #d0d7de;color:#57606a}
+hr{border:none;border-top:1px solid #d0d7de;margin:2em 0}
+a{color:#0969da;text-decoration:none}a:hover{text-decoration:underline}
+</style></head><body>
+<h1>NAVER Cloud SSL VPN 재연결 (<code>naver-vpn</code>)</h1>
+<p>NAVER Cloud SSL VPN(정부 클라우드, <code>gov-ncloud</code>) 을 <strong>터미널 한 줄로 재연결</strong>하는 도구.<br>GUI 앱을 띄우지 않고, 키체인에 저장된 비밀번호로 로그인 → 문자 OTP 입력 → OpenVPN 연결까지 자동으로 처리한다.</p>
+<pre><code>naver-vpn            # 문자 발송 후 OTP를 물어봄
+naver-vpn 123456     # 문자가 이미 와 있으면 OTP를 인자로</code></pre>
+<hr>
+<h2>왜 필요한가</h2>
+<p>NAVER Cloud SSL VPN 데스크톱 앱은 연결이 끊길 때마다(<code>INACTIVE_TIMEOUT</code> 등) 앱을 열어<br>아이디·비밀번호·OTP를 매번 입력해야 한다. 이 도구는 그 과정을 CLI로 옮겨:</p>
+<ul><li>비밀번호는 <strong>macOS 키체인</strong>에서 자동으로 꺼내 입력</li><li>macOS 관리자(맥) 비밀번호 입력 창도 <strong>NOPASSWD sudo 래퍼</strong>로 제거</li></ul>
+<p>남는 수동 입력은 <strong>문자로 받은 OTP 한 번뿐</strong>이다. (OTP는 SMS 기반이라 완전 무인 자동화는 불가능.)</p>
+<p>또한 연결 후에는 <strong>keepalive</strong> 가 자동으로 돌면서 터널이 유휴로 끊기는 것을 막는다.</p>
+<hr>
+<h2>동작 방식 (상세)</h2>
+<p>NAVER Cloud SSL VPN 앱은 사실 <strong>Electron + OpenVPN</strong> 조합이고, 인증은 2단계다.<br>이 도구는 앱이 내부적으로 하는 HTTPS 호출을 그대로 재현한다.</p>
+<pre><code>┌─────────────┐  ① POST /api/v3/authstate (ID + 비번)         ┌──────────────────┐
+│  naver-vpn  │ ───────────────────────────────────────────▶ │  포털 :8443      │
+│  (이 도구)  │ ◀─────────────────────────────────────────── │  (gov-ncloud)    │
+└─────────────┘   success / state / profile_body(.ovpn)        └──────────────────┘
+       │                    └─ 서버가 ② 휴대폰으로 OTP 문자 발송 ──▶ 📱
+       │
+       │  ③ 사용자가 문자 OTP 입력
+       │
+       │  ④ auth-file = &quot;아이디\nOTP&quot; 작성 (임시, chmod 600)
+       ▼
+┌─────────────┐  ⑤ sudo naver-vpn-up  (root 래퍼)             ┌──────────────────┐
+│  openvpn    │ ───────────────────────────────────────────▶ │  VPN 게이트웨이  │
+│  --daemon   │     username=아이디 / password=OTP 로 인증     │  :12033 (TCP)    │
+└─────────────┘ ◀─────────────────────────────────────────── └──────────────────┘
+       └─ utun 인터페이스에 10.0.0.x 할당 → 사내망 접근</code></pre>
+<ol><li><strong><code>POST /api/v3/authstate</code></strong> — 헤더 <code>Api-Version: 1</code>, 본문에 <code>user_id</code>, <code>passwd</code>(평문, HTTPS),</li></ol>
+<p>   <code>type:&quot;connect&quot;</code>, <code>ovpn_file_name</code>, <code>client_version</code>, <code>os_name/os_version</code>, <code>mac[]</code> 을 보낸다.<br>   서버가 비밀번호를 검증하면 <strong>OTP 문자를 발송</strong>하고, <code>state</code> 토큰과 base64 인코딩된<br>   <code>.ovpn</code> 프로필(<code>profile_body</code>)을 돌려준다.</p>
+<ol><li>받은 <code>.ovpn</code> 을 앱 데이터 디렉토리(<code>~/Library/Application Support/ncurion-sa-client/vpn/profiles/</code>)에 저장한다.</li><li>문자로 받은 <strong>OTP</strong> 를 입력받는다.</li><li><code>아이디\nOTP</code> 두 줄짜리 <strong>임시 인증파일</strong>(<code>/tmp/naver-vpn-auth.XXXX</code>, 권한 600)을 만든다.</li><li><strong>root 래퍼</strong>(<code>/usr/local/sbin/naver-vpn-up</code>)를 <code>sudo</code> 로 호출 → 기존 openvpn 종료 후</li></ol>
+<p>   <code>openvpn --config &lt;프로필&gt; --auth-user-pass &lt;인증파일&gt; --daemon</code> 실행.<br>   게이트웨이는 비밀번호 자리의 <strong>OTP</strong> 로 최종 인증한다.</p>
+<ol><li><code>utun</code> 에 <code>10.0.0.x</code> 가 잡히면 성공. (<code>TARGET</code> IP ping 으로 확인)</li></ol>
+<blockquote><strong>핵심 포인트:</strong> 처음에는 <code>/api/v2/*</code> 로 시도했으나 그 엔드포인트는 서버에서 폐기되어<br>항상 <code>{&quot;success&quot;:false}</code> 를 반환한다. 실제 동작 경로는 <strong><code>/api/v3</code></strong> 이다.<br>(mitmproxy 로 앱의 실제 트래픽을 캡처해서 확인했다.)</blockquote>
+<hr>
+<h2>유휴 끊김 방지 (keepalive)</h2>
+<p>서버는 <strong>실제 데이터 트래픽</strong> 이 없으면 일정 시간 후 세션을 끊는다(<code>INACTIVE_TIMEOUT</code>).<br>프로필에 OpenVPN 자체 <code>keepalive 10 30</code> 이 있지만 이건 제어채널 핑이라 서버의 유휴 판정을 막지 못한다.</p>
+<p>그래서 연결 성공 후 <strong>keepalive 데몬</strong>이 백그라운드로 떠서, 일정 주기마다 터널 너머<br>게이트웨이(<code>KEEPALIVE_HOST</code>, 기본 <code>10.0.0.1</code>)로 핑을 보내 <strong>실제 터널 트래픽</strong>을 만든다.</p>
+<ul><li>⚠️ 핑 대상은 반드시 <strong>터널 너머의 IP</strong>(게이트웨이 등)여야 한다. 로컬 터널 IP(<code>10.0.0.4</code>)로</li></ul>
+<p>  핑하면 패킷이 터널을 타지 않아 유휴 타이머가 리셋되지 않는다.</p>
+<ul><li>openvpn 프로세스가 사라지거나 핑이 연속 실패하면 keepalive 는 <strong>스스로 종료</strong>한다.</li><li>재연결(<code>vpn</code>) 시 기존 keepalive 는 정리되고 새로 시작된다.</li></ul>
+<pre><code>naver-vpn-keepalive status    # 상태
+naver-vpn-keepalive stop      # 수동 중지
+naver-vpn-keepalive start     # 수동 시작</code></pre>
+<p>설정(<code>~/.config/naver-vpn/config</code>):</p>
+<table><thead><tr><th>변수</th><th>기본값</th><th>설명</th></tr></thead><tbody><tr><td><code>KEEPALIVE</code></td><td><code>1</code></td><td>연결 후 자동 시작 (0 이면 비활성)</td></tr><tr><td><code>KEEPALIVE_INTERVAL</code></td><td><code>60</code></td><td>핑 주기(초)</td></tr><tr><td><code>KEEPALIVE_HOST</code></td><td><code>10.0.0.1</code></td><td>핑 대상(터널 너머 게이트웨이)</td></tr><tr><td><code>KEEPALIVE_FAILS</code></td><td><code>3</code></td><td>연속 실패 N회면 종료</td></tr></tbody></table>
+<p>로그: <code>~/.config/naver-vpn/keepalive.log</code></p>
+<hr>
+<h2>요구 사항</h2>
+<ul><li>macOS</li><li><strong>NAVER Cloud SSL VPN.app</strong> 설치 (<code>/Applications/</code> — 내부의 <code>openvpn</code> 바이너리를 사용)</li><li><code>jq</code>, <code>curl</code> (<code>brew install jq</code>)</li><li>관리자(sudo) 권한 — 설치 시 1회</li></ul>
+<hr>
+<h2>설치</h2>
+<pre><code>cd ~/work/naver-vpn
+
+make setup      # ① 아이디/도메인 입력 + 비밀번호를 키체인에 저장
+make install    # ② 클라이언트 + root 래퍼 + NOPASSWD 규칙 설치 (sudo 비번 1회)
+make status     # (선택) 설치/연결 상태 확인</code></pre>
+<p>설치되는 것:</p>
+<table><thead><tr><th>파일</th><th>위치</th><th>소유/권한</th><th>역할</th></tr></thead><tbody><tr><td><code>naver-vpn</code></td><td><code>/usr/local/bin/naver-vpn</code></td><td>root:wheel 0755</td><td>CLI 클라이언트</td></tr><tr><td><code>naver-vpn-keepalive</code></td><td><code>/usr/local/bin/naver-vpn-keepalive</code></td><td>root:wheel 0755</td><td>유휴 끊김 방지 데몬</td></tr><tr><td><code>vpn</code></td><td><code>/usr/local/bin/vpn</code></td><td>→ <code>naver-vpn</code> 심볼릭</td><td>짧은 별칭</td></tr><tr><td><code>naver-vpn-up</code></td><td><code>/usr/local/sbin/naver-vpn-up</code></td><td>root:wheel 0755</td><td>openvpn 실행 root 래퍼</td></tr><tr><td><code>naver-vpn</code></td><td><code>/etc/sudoers.d/naver-vpn</code></td><td>root:wheel 0440</td><td>래퍼 NOPASSWD 허용</td></tr><tr><td><code>config</code></td><td><code>~/.config/naver-vpn/config</code></td><td>0600</td><td>사용자 설정</td></tr><tr><td>(비밀번호)</td><td>macOS 키체인 <code>naver-vpn</code></td><td>—</td><td>VPN 비밀번호</td></tr></tbody></table>
+<hr>
+<h2>사용법</h2>
+<pre><code>vpn                  # 또는 naver-vpn</code></pre>
+<p>실행하면:</p>
+<ol><li><code>▶ 로그인 요청 중...</code> → 잠시 후 <strong>휴대폰으로 OTP 문자</strong> 도착</li><li><code>▶ 문자로 받은 OTP 입력:</code> 에 숫자 입력</li><li><code>✅ VPN 연결 완료 — 10.0.0.4 접근 가능</code></li><li>keepalive 자동 시작 → 이후 유휴로 끊기지 않음 (<code>naver-vpn-keepalive status</code> 로 확인)</li></ol>
+<p>문자가 이미 도착해 있으면 한 번에:</p>
+<pre><code>vpn 204767</code></pre>
+<hr>
+<h2>Make 명령 요약</h2>
+<table><thead><tr><th>명령</th><th>설명</th></tr></thead><tbody><tr><td><code>make setup</code></td><td>대화형 설정 — 아이디/도메인/프로필 + 키체인 비밀번호 저장 (sudo 불필요)</td></tr><tr><td><code>make install</code></td><td>클라이언트·래퍼·sudoers 설치 (필요 시 sudo 호출)</td></tr><tr><td><code>make uninstall</code></td><td>설치물 제거 (설정·키체인은 <strong>유지</strong>)</td></tr><tr><td><code>make purge</code></td><td><code>uninstall</code> + 설정파일·키체인 항목까지 삭제</td></tr><tr><td><code>make status</code></td><td>설치/설정/연결 상태 출력</td></tr><tr><td><code>make doc</code></td><td><code>README.md</code> → <code>README.html</code> 변환</td></tr><tr><td><code>make help</code></td><td>명령 목록</td></tr></tbody></table>
+<p>비밀번호만 다시 바꾸려면:</p>
+<pre><code>make setup
+# 또는 직접:
+security add-generic-password -U -s naver-vpn -a &lt;아이디&gt; -w</code></pre>
+<hr>
+<h2>제거</h2>
+<pre><code>make uninstall   # 바이너리/래퍼/sudoers 제거 (설정·키체인 유지)
+make purge       # 위 + ~/.config/naver-vpn 및 키체인 비밀번호까지 삭제</code></pre>
+<p>제거 후에도 NAVER Cloud SSL VPN 앱 자체는 그대로 남으며, 앱으로 평소처럼 연결할 수 있다.</p>
+<hr>
+<h2>보안 메모</h2>
+<ul><li><strong>비밀번호는 키체인에만</strong> 저장된다. 설정파일·스크립트에 평문으로 남지 않는다.</li><li><strong>OTP·인증파일</strong>은 임시파일(<code>/tmp/naver-vpn-auth.*</code>, 권한 600)로 만들어지고 종료 시 삭제된다.</li></ul>
+<p>  OpenVPN 은 <code>--auth-nocache</code> 로 메모리에 캐시하지 않는다.</p>
+<ul><li><strong>NOPASSWD 의 범위를 최소화</strong>했다. <code>openvpn</code> 바이너리에 직접 NOPASSWD 를 주면</li></ul>
+<p>  openvpn 설정의 <code>--up</code> 스크립트로 임의 명령을 root 로 실행할 수 있어 사실상 전체 root 권한이 된다.<br>  그래서 대신 <strong>하는 일이 고정된 root 래퍼</strong>(<code>naver-vpn-up</code>)에만 권한을 준다. 래퍼는:</p>
+<ul><li>openvpn 설정 디렉토리를 코드에 <strong>고정</strong> (임의 설정 실행 불가)</li><li>프로필 파일명(슬래시 없는 <code>*.ovpn</code>)·인증파일 경로(<code>/tmp/naver-vpn-auth.*</code>)를 <strong>검증</strong></li><li>root 소유·사용자 쓰기 불가</li><li>평문 비밀번호는 앱과 동일하게 <strong>HTTPS</strong> 로만 전송된다.</li></ul>
+<hr>
+<h2>문제 해결</h2>
+<table><thead><tr><th>증상</th><th>원인 / 조치</th></tr></thead><tbody><tr><td><code>로그인 실패</code></td><td>키체인 비밀번호가 틀림 → <code>make setup</code> 으로 재등록. 아이디(<code>VPN_USER</code>) 확인.</td></tr><tr><td>OTP 입력 후 실패</td><td>OTP 만료/오타. 다시 <code>vpn</code> 실행(새 문자 발송). 한 번에 하나의 OTP만 유효.</td></tr><tr><td>맥 비밀번호 창이 뜸</td><td>NOPASSWD 미설치 → <code>make install</code>. (<code>make status</code> 로 sudoers 확인)</td></tr><tr><td><code>command not found: vpn</code></td><td><code>/usr/local/bin</code> 이 PATH 에 없거나 <code>~/.zshrc</code> 의 옛 <code>alias vpn</code> 이 가림.</td></tr><tr><td><code>jq 가 필요합니다</code></td><td><code>brew install jq</code></td></tr><tr><td>연결은 됐는데 <code>❌</code> 표시</td><td><code>TARGET</code> IP 가 환경과 다름 → <code>make setup</code> 에서 수정. <code>make status</code> 로 utun 확인.</td></tr><tr><td>그래도 유휴로 끊김</td><td>keepalive 동작 확인(<code>naver-vpn-keepalive status</code>). 주기를 줄이거나(<code>KEEPALIVE_INTERVAL</code>) <code>KEEPALIVE_HOST</code> 를 터널 너머 응답 IP로. 로그: <code>~/.config/naver-vpn/keepalive.log</code></td></tr></tbody></table>
+<p>로그: <code>~/Library/Application Support/ncurion-sa-client/vpn/vpn.log</code></p>
+<hr>
+<h2>파일 구성</h2>
+<pre><code>work/naver-vpn/
+├── Makefile                 설치/제거/상태/문서 타깃
+├── README.md / README.html  문서
+├── config.example           설정 예시
+├── bin/naver-vpn            CLI 클라이언트
+├── bin/naver-vpn-keepalive  유휴 끊김 방지 데몬
+├── sbin/naver-vpn-up.in     root 래퍼 템플릿 (@HOME@ 치환)
+├── etc/naver-vpn.sudoers.in NOPASSWD 규칙 템플릿 (@USER@ 치환)
+└── tools/
+    ├── setup.sh             대화형 설정
+    ├── status.sh            상태 출력
+    └── md2html.py           Markdown→HTML 변환기</code></pre>
+</body></html>

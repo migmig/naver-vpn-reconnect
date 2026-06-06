@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# naver-vpn-keepalive — 터널이 유휴로 끊기지 않게 주기적으로 사내 IP로 핑을 보낸다.
+#
+# 서버는 실제 데이터 트래픽 기준으로 유휴(INACTIVE_TIMEOUT)를 판단하므로,
+# OpenVPN 자체 keepalive 와 별개로 터널을 통과하는 실트래픽이 필요하다.
+# 게이트웨이(KEEPALIVE_HOST, 기본 10.0.0.1)로 핑하면 터널을 실제로 통과한다.
+#
+# 사용법:
+#   naver-vpn-keepalive start    백그라운드 시작 (기존 인스턴스는 정리)
+#   naver-vpn-keepalive stop     중지
+#   naver-vpn-keepalive status   상태
+#   naver-vpn-keepalive run      포그라운드 루프(내부용)
+#
+set -euo pipefail
+
+CONF="${NAVER_VPN_CONFIG:-$HOME/.config/naver-vpn/config}"
+[ -f "$CONF" ] && . "$CONF" || true
+
+INTERVAL="${KEEPALIVE_INTERVAL:-60}"     # 핑 주기(초)
+HOST="${KEEPALIVE_HOST:-10.0.0.1}"        # 터널 너머 게이트웨이
+MAXFAILS="${KEEPALIVE_FAILS:-3}"          # 연속 실패 N회면 터널 끊긴 것으로 보고 종료
+
+STATEDIR="$HOME/.config/naver-vpn"
+PIDFILE="$STATEDIR/keepalive.pid"
+LOG="$STATEDIR/keepalive.log"
+mkdir -p "$STATEDIR"
+
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+ts(){ date '+%Y-%m-%d %H:%M:%S'; }
+alive(){ [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; }
+
+cmd="${1:-status}"
+case "$cmd" in
+  start)
+    if alive; then echo "keepalive 이미 실행중 (pid $(cat "$PIDFILE"))"; exit 0; fi
+    rm -f "$PIDFILE"
+    nohup "$SELF" run >>"$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    disown 2>/dev/null || true
+    echo "✅ keepalive 시작 (pid $(cat "$PIDFILE"), ${INTERVAL}s 마다 $HOST 핑)"
+    ;;
+  stop)
+    if alive; then kill "$(cat "$PIDFILE")" 2>/dev/null || true; rm -f "$PIDFILE"; echo "✅ keepalive 중지"; \
+    else echo "keepalive 실행중 아님"; rm -f "$PIDFILE"; fi
+    ;;
+  status)
+    if alive; then echo "● 실행중 (pid $(cat "$PIDFILE"), ${INTERVAL}s → $HOST)"; \
+    else echo "○ 중지됨"; fi
+    ;;
+  run)
+    echo "[$(ts)] keepalive 시작: ${INTERVAL}s 마다 $HOST 핑 (연속 ${MAXFAILS}회 실패 시 종료)"
+    fails=0
+    while true; do
+      # openvpn 이 죽었으면 터널 없음 → 종료
+      if ! pgrep -f 'vpn/openvpn' >/dev/null 2>&1; then
+        echo "[$(ts)] openvpn 프로세스 없음 → keepalive 종료"; break
+      fi
+      if ping -c1 -t3 "$HOST" >/dev/null 2>&1; then
+        fails=0
+      else
+        fails=$((fails+1))
+        echo "[$(ts)] 핑 실패 ($fails/$MAXFAILS) → $HOST"
+        if [ "$fails" -ge "$MAXFAILS" ]; then
+          echo "[$(ts)] 연속 실패 한계 도달 → keepalive 종료"; break
+        fi
+      fi
+      sleep "$INTERVAL"
+    done
+    rm -f "$PIDFILE"
+    ;;
+  *)
+    echo "사용법: naver-vpn-keepalive {start|stop|status|run}"; exit 1 ;;
+esac

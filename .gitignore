@@ -1,0 +1,12 @@
+# 생성/임시 파일
+*.gen
+.DS_Store
+
+# 런타임 산출물 (저장소엔 사용자 설정/로그/인증 흔적을 두지 않음)
+keepalive.log
+*.pid
+config
+
+# python
+__pycache__/
+*.pyc
