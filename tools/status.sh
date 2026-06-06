@@ -13,7 +13,12 @@ no(){ printf "  \033[31m✗\033[0m %s\n" "$1"; }
 echo "== 설치 상태 =="
 [ -x "$BINDIR/naver-vpn" ] && ok "client    $BINDIR/naver-vpn" || no "client    미설치"
 [ -x "$BINDIR/naver-vpn-keepalive" ] && ok "keepalive $BINDIR/naver-vpn-keepalive" || no "keepalive 미설치"
-{ [ -L "$BINDIR/vpn" ] || [ -x "$BINDIR/vpn" ]; } && ok "alias     $BINDIR/vpn" || no "alias     vpn 심볼릭 없음"
+AL="$( . "$HOME/.config/naver-vpn/config" 2>/dev/null; echo "${ALIAS:-}" )"
+if [ -n "$AL" ] && [ -L "$BINDIR/$AL" ] && [ "$(readlink "$BINDIR/$AL")" = "naver-vpn" ]; then
+  ok "alias     $BINDIR/$AL → naver-vpn"
+else
+  no "alias     별칭 없음 (make install 에서 지정)"
+fi
 [ -x "$SBINDIR/naver-vpn-up" ] && ok "wrapper   $SBINDIR/naver-vpn-up" || no "wrapper   미설치"
 [ -f "$SUDOERSD/naver-vpn" ] && ok "sudoers   $SUDOERSD/naver-vpn (NOPASSWD)" || no "sudoers   미설치 (연결 시 비번 필요)"
 

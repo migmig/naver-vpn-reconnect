@@ -11,12 +11,13 @@ CONF="$CONFDIR/config"
 mkdir -p "$CONFDIR"
 
 # 기존 설정 있으면 기본값으로 활용
-OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_TGT=""
+OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_TGT=""; OLD_ALIAS=""
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
   . "$CONF" || true
-  OLD_USER="${VPN_USER:-}"; OLD_DOM="${DOMAIN:-}"; OLD_OVPN="${OVPN_NAME:-}"; OLD_TGT="${TARGET:-}"
+  OLD_USER="${VPN_USER:-}"; OLD_DOM="${DOMAIN:-}"; OLD_OVPN="${OVPN_NAME:-}"; OLD_TGT="${TARGET:-}"; OLD_ALIAS="${ALIAS:-}"
 fi
+ALIAS_VAL="${OLD_ALIAS:-vpn}"   # 별칭 이름은 'make install' 에서 정함; 여기선 기존값 보존
 
 DEF_DOM="${OLD_DOM:-https://sslvpn-kr-vpc-01.gov-ncloud.com:8443}"
 DEF_TGT="${OLD_TGT:-10.0.0.4}"
@@ -58,6 +59,8 @@ OVPN_NAME="$OV"
 CLIENT_VERSION="1.1.3"
 KC_SERVICE="naver-vpn"
 TARGET="$TG"
+# 단축 명령(별칭) 이름 — 'make install' 에서 정하고 갱신한다.
+ALIAS="$ALIAS_VAL"
 # MAC_JSON 을 비워두면 실행 시 자동탐지한다.
 # 특정 값으로 고정하려면: MAC_JSON='["AA-BB-CC-DD-EE-FF"]'
 MAC_JSON=""

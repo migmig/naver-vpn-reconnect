@@ -34,36 +34,17 @@ setup:
 	@bash tools/setup.sh
 
 # ---- 설치 (root 래퍼/sudoers 는 sudo 필요) ----
+# 단축 명령 이름을 대화형으로 정함. 지정하려면: make install ALIAS=nvpn  (생략은 ALIAS=-)
 install:
-	@if [ "$$(id -u)" = "0" ]; then echo "❌ 'sudo make install' 말고 'make install' 로 실행하세요 (필요할 때만 sudo 가 호출됩니다)."; exit 1; fi
-	@echo "==> 클라이언트 설치: $(BINDIR)/naver-vpn  (+ keepalive, vpn 심볼릭)"
-	sudo install -d -o root -g wheel -m 0755 $(BINDIR) $(SBINDIR)
-	sudo install -o root -g wheel -m 0755 bin/naver-vpn $(BINDIR)/naver-vpn
-	sudo install -o root -g wheel -m 0755 bin/naver-vpn-keepalive $(BINDIR)/naver-vpn-keepalive
-	sudo ln -sf naver-vpn $(BINDIR)/vpn
-	@echo "==> root 래퍼 설치: $(SBINDIR)/naver-vpn-up  (HOME=$(HOMEDIR))"
-	sed 's#@HOME@#$(HOMEDIR)#g' sbin/naver-vpn-up.in > /tmp/naver-vpn-up.gen
-	sudo install -o root -g wheel -m 0755 /tmp/naver-vpn-up.gen $(SBINDIR)/naver-vpn-up
-	@rm -f /tmp/naver-vpn-up.gen
-	@echo "==> sudoers 설치: $(SUDOERSD)/naver-vpn  (user=$(REALUSER))"
-	sed 's#@USER@#$(REALUSER)#g' etc/naver-vpn.sudoers.in > /tmp/naver-vpn.sudoers.gen
-	sudo visudo -cf /tmp/naver-vpn.sudoers.gen
-	sudo install -o root -g wheel -m 0440 /tmp/naver-vpn.sudoers.gen $(SUDOERSD)/naver-vpn
-	@rm -f /tmp/naver-vpn.sudoers.gen
-	@echo ""
-	@echo "✅ 설치 완료."
-	@[ -f $(CONFDIR)/config ] || echo "   ⚠️  아직 설정이 없습니다 — 'make setup' 을 실행하세요."
-	@if grep -qs 'alias[[:space:]]\+vpn' $(HOMEDIR)/.zshrc; then \
-	  echo "   ⚠️  ~/.zshrc 의 'alias vpn' 가 $(BINDIR)/vpn 보다 우선합니다. 그 줄을 지우면 새 vpn 명령이 적용됩니다."; fi
-	@case ":$$PATH:" in *":$(BINDIR):"*) ;; *) echo "   ⚠️  $(BINDIR) 가 PATH 에 없습니다. naver-vpn 전체경로로 실행하거나 PATH 에 추가하세요.";; esac
+	@PREFIX="$(PREFIX)" BINDIR="$(BINDIR)" SBINDIR="$(SBINDIR)" SUDOERSD="$(SUDOERSD)" \
+	  REALUSER="$(REALUSER)" HOMEDIR="$(HOMEDIR)" CONFDIR="$(CONFDIR)" ALIAS="$(ALIAS)" \
+	  bash tools/install.sh
 
 # ---- 제거 (설정/키체인 유지) ----
 uninstall:
-	@echo "==> 설치물 제거"
-	@if [ -L $(BINDIR)/vpn ] && [ "$$(readlink $(BINDIR)/vpn)" = "naver-vpn" ]; then sudo rm -f $(BINDIR)/vpn; fi
-	-@command -v naver-vpn-keepalive >/dev/null 2>&1 && naver-vpn-keepalive stop >/dev/null 2>&1 || true
-	sudo rm -f $(BINDIR)/naver-vpn $(BINDIR)/naver-vpn-keepalive $(SBINDIR)/naver-vpn-up $(SUDOERSD)/naver-vpn
-	@echo "✅ 제거 완료 (설정 $(CONFDIR), 키체인은 유지). 완전삭제: make purge"
+	@PREFIX="$(PREFIX)" BINDIR="$(BINDIR)" SBINDIR="$(SBINDIR)" SUDOERSD="$(SUDOERSD)" \
+	  REALUSER="$(REALUSER)" HOMEDIR="$(HOMEDIR)" CONFDIR="$(CONFDIR)" \
+	  bash tools/uninstall.sh
 
 # ---- 완전 삭제 ----
 purge: uninstall

@@ -128,9 +128,18 @@ naver-vpn-keepalive start     # 수동 시작
 ```bash
 cd ~/work/naver-vpn
 
-make setup      # ① 아이디/도메인 입력 + 비밀번호를 키체인에 저장
-make install    # ② 클라이언트 + root 래퍼 + NOPASSWD 규칙 설치 (sudo 비번 1회)
+make setup      # ① 아이디/도메인/프로필 + 비밀번호를 키체인에 저장
+make install    # ② 클라이언트 + root 래퍼 + NOPASSWD 설치 (sudo 1회)
+                #    설치 중 단축 명령(별칭) 이름을 물어봄 (기본 vpn)
 make status     # (선택) 설치/연결 상태 확인
+```
+
+**단축 명령(별칭) 이름**은 `make install` 중에 정한다(기본 `vpn`). `naver-vpn` 은 항상 설치되고,
+별칭은 그 심볼릭 링크다. 선택한 이름은 `config` 에 기록되어 `uninstall` 도 같은 이름을 정리한다.
+
+```bash
+make install ALIAS=nvpn   # 비대화형으로 별칭 지정
+make install ALIAS=-      # 별칭 없이 (naver-vpn 만)
 ```
 
 설치되는 것:
@@ -139,7 +148,7 @@ make status     # (선택) 설치/연결 상태 확인
 |------|------|-----------|------|
 | `naver-vpn` | `/usr/local/bin/naver-vpn` | root:wheel 0755 | CLI 클라이언트 |
 | `naver-vpn-keepalive` | `/usr/local/bin/naver-vpn-keepalive` | root:wheel 0755 | 유휴 끊김 방지 데몬 |
-| `vpn` | `/usr/local/bin/vpn` | → `naver-vpn` 심볼릭 | 짧은 별칭 |
+| `<별칭>` | `/usr/local/bin/<별칭>` | → `naver-vpn` 심볼릭 | 설치 시 정한 단축 명령(기본 `vpn`) |
 | `naver-vpn-up` | `/usr/local/sbin/naver-vpn-up` | root:wheel 0755 | openvpn 실행 root 래퍼 |
 | `naver-vpn` | `/etc/sudoers.d/naver-vpn` | root:wheel 0440 | 래퍼 NOPASSWD 허용 |
 | `config` | `~/.config/naver-vpn/config` | 0600 | 사용자 설정 |
@@ -245,6 +254,8 @@ work/naver-vpn/
 ├── etc/naver-vpn.sudoers.in NOPASSWD 규칙 템플릿 (@USER@ 치환)
 └── tools/
     ├── setup.sh             대화형 설정
+    ├── install.sh           설치 (별칭 선택 포함)
+    ├── uninstall.sh         제거
     ├── status.sh            상태 출력
     └── md2html.py           Markdown→HTML 변환기
 ```
