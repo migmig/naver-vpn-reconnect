@@ -7,53 +7,79 @@ SBINDIR="${2:-/usr/local/sbin}"
 SUDOERSD="${3:-/etc/sudoers.d}"
 CONF="$HOME/.config/naver-vpn/config"
 
+# ---- 색 (make export 사용, 단독 실행 시 TTY 감지) ----
 if [ -z "${C_RESET+x}" ]; then
   if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_RED=$'\033[31m'; C_BOLD=$'\033[1m'
-  else C_RESET=; C_GREEN=; C_RED=; C_BOLD=; fi
+    C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'
+    C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_CYAN=$'\033[36m'
+  else C_RESET=; C_BOLD=; C_DIM=; C_RED=; C_GREEN=; C_YELLOW=; C_CYAN=; fi
 fi
-ok(){ printf "  %s✔%s %s\n" "$C_GREEN" "$C_RESET" "$1"; }
-no(){ printf "  %s✗%s %s\n" "$C_RED" "$C_RESET" "$1"; }
 
-printf '%s== 설치 상태 ==%s\n' "$C_BOLD" "$C_RESET"
-[ -x "$BINDIR/naver-vpn" ] && ok "client    $BINDIR/naver-vpn" || no "client    미설치"
-[ -x "$BINDIR/naver-vpn-keepalive" ] && ok "keepalive $BINDIR/naver-vpn-keepalive" || no "keepalive 미설치"
-AL="$( . "$HOME/.config/naver-vpn/config" 2>/dev/null; echo "${ALIAS:-}" )"
+LW=10   # 라벨 폭(ASCII)
+sec(){ printf '\n%s%s▸ %s%s\n' "$C_BOLD" "$C_CYAN" "$1" "$C_RESET"; }
+# row <ok|warn|no> <label> <value>
+row(){
+  local g c
+  case "$1" in
+    ok)   g='✔'; c="$C_GREEN"  ;;
+    warn) g='!'; c="$C_YELLOW" ;;
+    *)    g='✗'; c="$C_RED"    ;;
+  esac
+  printf '   %s%s%s  %s%-*s%s %s\n' "$c" "$g" "$C_RESET" "$C_DIM" "$LW" "$2" "$C_RESET" "$3"
+}
+dimp(){ printf '%s%s%s' "$C_DIM" "$1" "$C_RESET"; }   # 경로 등 흐리게
+
+printf '\n %s%s NAVER Cloud SSL VPN — 상태 %s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+
+# ===== 설치 =====
+sec "설치"
+[ -x "$BINDIR/naver-vpn" ]           && row ok   "client"    "$(dimp "$BINDIR/naver-vpn")"           || row no   "client"    "미설치"
+[ -x "$BINDIR/naver-vpn-keepalive" ] && row ok   "keepalive" "$(dimp "$BINDIR/naver-vpn-keepalive")" || row no   "keepalive" "미설치"
+AL="$( . "$CONF" 2>/dev/null; echo "${ALIAS:-}" )"
 if [ -n "$AL" ] && [ -L "$BINDIR/$AL" ] && [ "$(readlink "$BINDIR/$AL")" = "naver-vpn" ]; then
-  ok "alias     $BINDIR/$AL → naver-vpn"
+  row ok   "alias"     "$C_CYAN$AL$C_RESET $(dimp "→ naver-vpn")"
 else
-  no "alias     별칭 없음 (make install 에서 지정)"
+  row warn "alias"     "없음 $(dimp "(make install 에서 지정)")"
 fi
-[ -x "$SBINDIR/naver-vpn-up" ] && ok "wrapper   $SBINDIR/naver-vpn-up" || no "wrapper   미설치"
-[ -f "$SUDOERSD/naver-vpn" ] && ok "sudoers   $SUDOERSD/naver-vpn (NOPASSWD)" || no "sudoers   미설치 (연결 시 비번 필요)"
+[ -x "$SBINDIR/naver-vpn-up" ]       && row ok   "wrapper"   "$(dimp "$SBINDIR/naver-vpn-up")"       || row no   "wrapper"   "미설치"
+[ -f "$SUDOERSD/naver-vpn" ]         && row ok   "sudoers"   "NOPASSWD $(dimp "$SUDOERSD/naver-vpn")" || row warn "sudoers"   "미설치 $(dimp "(연결 시 맥 비번 필요)")"
 
-printf '%s== 설정 ==%s\n' "$C_BOLD" "$C_RESET"
+# ===== 설정 =====
+sec "설정"
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
   . "$CONF" 2>/dev/null || true
-  ok "config    $CONF (user=${VPN_USER:-?})"
+  row ok "config"   "user=$C_BOLD${VPN_USER:-?}$C_RESET  $(dimp "ovpn=${OVPN_NAME:-?}")"
   if security find-generic-password -s "${KC_SERVICE:-naver-vpn}" -a "${VPN_USER:-}" >/dev/null 2>&1; then
-    ok "keychain  비밀번호 저장됨"
+    row ok "keychain" "비밀번호 저장됨"
   else
-    no "keychain  비밀번호 없음 (make setup)"
+    row no "keychain" "비밀번호 없음 $(dimp "(make setup)")"
   fi
 else
-  no "config    없음 (make setup)"
+  row no "config"   "없음 $(dimp "(make setup)")"
 fi
 
-printf '%s== 연결 ==%s\n' "$C_BOLD" "$C_RESET"
+# ===== 연결 =====
+sec "연결"
 TGT="${TARGET:-10.0.0.4}"
+CONNECTED=0
 if ifconfig 2>/dev/null | grep -q "inet ${TGT} "; then
-  ok "tunnel    $TGT 활성"
+  row ok "tunnel"  "$C_GREEN$TGT 활성$C_RESET"; CONNECTED=1
 elif ping -c1 -t2 "$TGT" >/dev/null 2>&1; then
-  ok "reach     $TGT 접근 가능"
+  row ok "tunnel"  "$TGT 접근 가능"; CONNECTED=1
 else
-  no "tunnel    연결 안됨 (naver-vpn 으로 연결)"
+  row no "tunnel"  "연결 안됨 $(dimp "(naver-vpn 으로 연결)")"
 fi
-
 KAPID="$HOME/.config/naver-vpn/keepalive.pid"
 if [ -f "$KAPID" ] && kill -0 "$(cat "$KAPID" 2>/dev/null)" 2>/dev/null; then
-  ok "keepalive 실행중 (pid $(cat "$KAPID"), ${KEEPALIVE_INTERVAL:-60}s → ${KEEPALIVE_HOST:-10.0.0.1})"
+  row ok   "keepalive" "실행중 $(dimp "pid $(cat "$KAPID") · ${KEEPALIVE_INTERVAL:-60}s → ${KEEPALIVE_HOST:-10.0.0.1}")"
 else
-  no "keepalive 중지됨"
+  row warn "keepalive" "중지됨"
+fi
+
+# ===== 요약 =====
+if [ "$CONNECTED" = 1 ]; then
+  printf '\n %s● VPN 연결됨%s\n\n' "$C_GREEN" "$C_RESET"
+else
+  printf '\n %s○ VPN 연결 안됨%s  %s→ naver-vpn 으로 연결%s\n\n' "$C_RED" "$C_RESET" "$C_DIM" "$C_RESET"
 fi
