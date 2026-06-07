@@ -66,17 +66,18 @@ ask VU "VPN 아이디"   "$OLD_USER"; VU="${VU:-$OLD_USER}"
 [ -n "$VU" ] || { errm "아이디는 필수입니다."; exit 1; }
 ask DM "포털 도메인"   "$DEF_DOM";  DM="${DM:-$DEF_DOM}"
 ask OV "프로필 파일명" "$DEF_OVPN"; OV="${OV:-$DEF_OVPN}"
-ask TG "연결확인 IP"   "$DEF_TGT";  TG="${TG:-$DEF_TGT}"
+info "터널 IP·게이트웨이는 사람마다 달라 자동 감지합니다 (입력 불필요)."
 
 # ---- keepalive ----
 sec "🔁" "keepalive (유휴 끊김 방지)"
-OLD_KA="${KEEPALIVE:-1}"; OLD_KAH="${KEEPALIVE_HOST:-10.0.0.1}"; OLD_KAI="${KEEPALIVE_INTERVAL:-60}"
+OLD_KA="${KEEPALIVE:-1}"; OLD_KAH="${KEEPALIVE_HOST:-}"; OLD_KAI="${KEEPALIVE_INTERVAL:-60}"
 ask KA "사용하시겠어요? (Y/n)" "$([ "$OLD_KA" = 0 ] && echo n || echo Y)"
 case "${KA:-y}" in [Nn]*) KAV="0";; *) KAV="1";; esac
 KAH="$OLD_KAH"; KAI="$OLD_KAI"
 if [ "$KAV" = "1" ]; then
-  ask KAH "핑 대상(게이트웨이)" "$OLD_KAH"; KAH="${KAH:-$OLD_KAH}"
-  ask KAI "주기(초)"            "$OLD_KAI"; KAI="${KAI:-$OLD_KAI}"
+  ask KAH "핑 대상 게이트웨이 (비우면 자동)" "${OLD_KAH:-자동}"
+  [ "$KAH" = "자동" ] && KAH=""
+  ask KAI "주기(초)" "$OLD_KAI"; KAI="${KAI:-$OLD_KAI}"
 fi
 
 umask 077
@@ -87,7 +88,8 @@ DOMAIN="$DM"
 OVPN_NAME="$OV"
 CLIENT_VERSION="1.1.3"
 KC_SERVICE="naver-vpn"
-TARGET="$TG"
+# TARGET: 연결 확인은 openvpn 로그로 자동 판단한다. 특정 IP 도 확인하려면 지정(선택).
+TARGET=""
 # 단축 명령(별칭) 이름 — 'make install' 에서 정하고 갱신한다.
 ALIAS="$ALIAS_VAL"
 # MAC_JSON 을 비워두면 실행 시 자동탐지한다.

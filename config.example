@@ -6,7 +6,7 @@ DOMAIN="https://sslvpn-kr-vpc-01.gov-ncloud.com:8443"        # 포털/API 도메
 OVPN_NAME="vpnXXXX.ovpn"                                      # 계정별 프로필 식별자 (NAVER 앱이 받아둔 이름; make setup 이 자동감지)
 CLIENT_VERSION="1.1.3"                                        # 앱 클라이언트 버전
 KC_SERVICE="naver-vpn"                                        # 키체인 서비스명
-TARGET="10.0.0.4"                                             # 연결 성공 판정용 IP
+TARGET=""                                                    # (선택) 추가 확인용 IP. 비우면 openvpn 로그로 자동 판정
 ALIAS="vpn"                                                   # 단축 명령 이름 (make install 에서 정함; ""=별칭 없음)
 
 # 비우면 실행 시 자동탐지. 고정하려면 예: MAC_JSON='["AA-BB-CC-DD-EE-FF"]'
@@ -15,5 +15,5 @@ MAC_JSON=""
 # ---- keepalive (유휴 끊김 방지) ----
 KEEPALIVE="1"               # 1=연결 후 자동 시작, 0=비활성
 KEEPALIVE_INTERVAL="60"     # 핑 주기(초)
-KEEPALIVE_HOST="10.0.0.1"   # 터널 너머 게이트웨이 (로컬 터널 IP가 아니어야 함)
+KEEPALIVE_HOST=""           # 비우면 터널 게이트웨이 자동 감지. 고정 시 '터널 너머' IP (로컬 터널 IP 아님)
 KEEPALIVE_FAILS="3"         # 연속 실패 N회면 터널 끊긴 것으로 보고 종료

@@ -39,12 +39,27 @@ DOMAIN="${DOMAIN:-https://sslvpn-kr-vpc-01.gov-ncloud.com:8443}"
 OVPN_NAME="${OVPN_NAME:-vpn2033.ovpn}"
 CLIENT_VERSION="${CLIENT_VERSION:-1.1.3}"
 KC_SERVICE="${KC_SERVICE:-naver-vpn}"
-TARGET="${TARGET:-10.0.0.4}"
+TARGET="${TARGET:-}"   # (선택) 추가 확인용 IP. 비우면 자동 감지만 사용
 
 OVPN_BIN="/Applications/NAVER Cloud SSL VPN.app/Contents/vpn/openvpn"
 DATADIR="$HOME/Library/Application Support/ncurion-sa-client/vpn"
 LOG="$DATADIR/vpn.log"
 WRAPPER="/usr/local/sbin/naver-vpn-up"
+
+# 터널에 할당된 사설 IP (사람마다 다름 — 자동 감지)
+tunnel_ip(){
+  ifconfig 2>/dev/null | awk '
+    /^utun[0-9]/{u=1; next} /^[a-z]/{u=0}
+    u && /inet /{ if ($2 ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/){print $2; exit} }'
+}
+# 터널 게이트웨이 (openvpn 이 push 한 route 의 게이트웨이; 실패 시 .1 추정)
+tunnel_gw(){
+  local ip="$1" gw
+  gw="$(awk '/route add -net/{for(i=1;i<=NF;i++) if($i=="-net"){print $(i+2); break}}' "$LOG" 2>/dev/null \
+        | grep -E '^(10\.|172\.|192\.168\.)' | grep -v -x "$ip" | head -1)"
+  [ -z "$gw" ] && [ -n "$ip" ] && gw="${ip%.*}.1"
+  echo "$gw"
+}
 
 command -v jq   >/dev/null 2>&1 || { errm "jq 가 필요합니다: brew install jq"; exit 1; }
 command -v curl >/dev/null 2>&1 || { errm "curl 이 필요합니다"; exit 1; }
@@ -112,24 +127,33 @@ APPLESCRIPT
 fi
 sleep 2
 
-# --- 6) 연결 확인 ---
+# --- 6) 연결 확인 (openvpn 로그 기반 — 개인 IP 에 의존하지 않음) ---
 line "⏳ 연결 확인 중…"
-for _ in $(seq 1 25); do
-  if ping -c1 -t2 "$TARGET" >/dev/null 2>&1; then
-    line "✅ 연결 완료 — $C_GREEN$C_BOLD$TARGET$C_RESET 접근 가능"
-    # --- 7) keepalive 시작 (유휴 끊김 방지) ---
-    if [ "${KEEPALIVE:-1}" != "0" ]; then
-      KA="$(dirname "$0")/naver-vpn-keepalive"
-      [ -x "$KA" ] || KA="naver-vpn-keepalive"
-      if command -v "$KA" >/dev/null 2>&1 && "$KA" start >/dev/null 2>&1; then
-        line "🔁 keepalive 시작  $(dim "${KEEPALIVE_INTERVAL:-60}s → ${KEEPALIVE_HOST:-10.0.0.1}")"
-      fi
-    fi
-    fbot; exit 0
-  fi
+ok=0
+for _ in $(seq 1 30); do
+  grep -q "Initialization Sequence Completed" "$LOG" 2>/dev/null && { ok=1; break; }
+  # 사용자가 TARGET 을 지정했다면 그 IP 도달도 성공으로 인정
+  [ -n "$TARGET" ] && ping -c1 -t2 "$TARGET" >/dev/null 2>&1 && { ok=1; break; }
   sleep 1
 done
-line "❌ 연결 실패  $(dim "로그: $LOG")"
-fbot
-tail -25 "$LOG" 2>/dev/null || true
-exit 1
+if [ "$ok" != 1 ]; then
+  line "❌ 연결 실패  $(dim "로그: $LOG")"
+  fbot
+  tail -25 "$LOG" 2>/dev/null || true
+  exit 1
+fi
+
+IP="$(tunnel_ip)"; GW="$(tunnel_gw "$IP")"
+if [ -n "$IP" ]; then line "✅ 연결 완료 — $C_GREEN$C_BOLD${IP}$C_RESET $(dim '(터널 IP 할당)')"
+else line "✅ 연결 완료"; fi
+
+# --- 7) keepalive 시작 (유휴 끊김 방지) ---
+if [ "${KEEPALIVE:-1}" != "0" ]; then
+  KA="$(dirname "$0")/naver-vpn-keepalive"
+  [ -x "$KA" ] || KA="naver-vpn-keepalive"
+  if command -v "$KA" >/dev/null 2>&1 && "$KA" start >/dev/null 2>&1; then
+    KHSHOW="${KEEPALIVE_HOST:-${GW:-자동}}"
+    line "🔁 keepalive 시작  $(dim "${KEEPALIVE_INTERVAL:-60}s → $KHSHOW")"
+  fi
+fi
+fbot; exit 0

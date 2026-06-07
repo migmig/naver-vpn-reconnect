@@ -18,13 +18,28 @@ CONF="${NAVER_VPN_CONFIG:-$HOME/.config/naver-vpn/config}"
 [ -f "$CONF" ] && . "$CONF" || true
 
 INTERVAL="${KEEPALIVE_INTERVAL:-60}"     # 핑 주기(초)
-HOST="${KEEPALIVE_HOST:-10.0.0.1}"        # 터널 너머 게이트웨이
 MAXFAILS="${KEEPALIVE_FAILS:-3}"          # 연속 실패 N회면 터널 끊긴 것으로 보고 종료
 
 STATEDIR="$HOME/.config/naver-vpn"
 PIDFILE="$STATEDIR/keepalive.pid"
 LOG="$STATEDIR/keepalive.log"
+VPNLOG="$HOME/Library/Application Support/ncurion-sa-client/vpn/vpn.log"
 mkdir -p "$STATEDIR"
+
+# 터널 게이트웨이 자동 감지 (사람마다 IP 가 다르므로 하드코딩하지 않음)
+detect_gw(){
+  local ip gw
+  ip="$(ifconfig 2>/dev/null | awk '
+    /^utun[0-9]/{u=1; next} /^[a-z]/{u=0}
+    u && /inet /{ if ($2 ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/){print $2; exit} }')"
+  gw="$(awk '/route add -net/{for(i=1;i<=NF;i++) if($i=="-net"){print $(i+2); break}}' "$VPNLOG" 2>/dev/null \
+        | grep -E '^(10\.|172\.|192\.168\.)' | grep -v -x "$ip" | head -1)"
+  [ -z "$gw" ] && [ -n "$ip" ] && gw="${ip%.*}.1"
+  echo "$gw"
+}
+# 설정에 KEEPALIVE_HOST 가 있으면 그걸, 없으면 자동 감지, 그래도 없으면 .1 기본
+HOST="${KEEPALIVE_HOST:-$(detect_gw)}"
+[ -z "$HOST" ] && HOST="10.0.0.1"
 
 if [ -z "${C_RESET+x}" ]; then
   if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then

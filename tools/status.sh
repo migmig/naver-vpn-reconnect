@@ -68,18 +68,21 @@ fi
 
 # ===== 연결 =====
 sec "🌐" "연결"
-TGT="${TARGET:-10.0.0.4}"
+# 터널 IP 는 사람마다 다르므로 utun 인터페이스의 사설 IP 를 자동 감지
+TUNIP="$(ifconfig 2>/dev/null | awk '
+  /^utun[0-9]/{u=1; next} /^[a-z]/{u=0}
+  u && /inet /{ if ($2 ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/){print $2; exit} }')"
 CONNECTED=0
-if ifconfig 2>/dev/null | grep -q "inet ${TGT} "; then
-  row ok "tunnel"  "$C_GREEN$TGT 활성$C_RESET"; CONNECTED=1
-elif ping -c1 -t2 "$TGT" >/dev/null 2>&1; then
-  row ok "tunnel"  "$TGT 접근 가능"; CONNECTED=1
+if [ -n "$TUNIP" ]; then
+  row ok "tunnel"  "$C_GREEN$TUNIP 활성$C_RESET $(dimp "(자동 감지)")"; CONNECTED=1
+elif [ -n "${TARGET:-}" ] && ping -c1 -t2 "$TARGET" >/dev/null 2>&1; then
+  row ok "tunnel"  "$TARGET 접근 가능"; CONNECTED=1
 else
   row no "tunnel"  "연결 안됨 $(dimp "(naver-vpn 으로 연결)")"
 fi
 KAPID="$HOME/.config/naver-vpn/keepalive.pid"
 if [ -f "$KAPID" ] && kill -0 "$(cat "$KAPID" 2>/dev/null)" 2>/dev/null; then
-  row ok   "keepalive" "실행중 $(dimp "pid $(cat "$KAPID") · ${KEEPALIVE_INTERVAL:-60}s → ${KEEPALIVE_HOST:-10.0.0.1}")"
+  row ok   "keepalive" "실행중 $(dimp "pid $(cat "$KAPID") · ${KEEPALIVE_INTERVAL:-60}s → ${KEEPALIVE_HOST:-자동}")"
 else
   row warn "keepalive" "중지됨"
 fi

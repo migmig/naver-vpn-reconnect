@@ -57,7 +57,7 @@ NAVER Cloud SSL VPN 앱은 사실 **Electron + OpenVPN** 조합이고, 인증은
 5. **root 래퍼**(`/usr/local/sbin/naver-vpn-up`)를 `sudo` 로 호출 → 기존 openvpn 종료 후
    `openvpn --config <프로필> --auth-user-pass <인증파일> --daemon` 실행.
    게이트웨이는 비밀번호 자리의 **OTP** 로 최종 인증한다.
-6. `utun` 에 `10.0.0.x` 가 잡히면 성공. (`TARGET` IP ping 으로 확인)
+6. openvpn 로그(`Initialization Sequence Completed`)로 성공을 판정한다. 할당되는 **터널 IP(`utun`의 `10.x`)는 사람마다 다르므로 자동 감지**한다(하드코딩 안 함).
 
 > **핵심 포인트:** 처음에는 `/api/v2/*` 로 시도했으나 그 엔드포인트는 서버에서 폐기되어
 > 항상 `{"success":false}` 를 반환한다. 실제 동작 경로는 **`/api/v3`** 이다.
@@ -71,7 +71,7 @@ NAVER Cloud SSL VPN 앱은 사실 **Electron + OpenVPN** 조합이고, 인증은
 프로필에 OpenVPN 자체 `keepalive 10 30` 이 있지만 이건 제어채널 핑이라 서버의 유휴 판정을 막지 못한다.
 
 그래서 연결 성공 후 **keepalive 데몬**이 백그라운드로 떠서, 일정 주기마다 터널 너머
-게이트웨이(`KEEPALIVE_HOST`, 기본 `10.0.0.1`)로 핑을 보내 **실제 터널 트래픽**을 만든다.
+게이트웨이(`KEEPALIVE_HOST`, **비우면 자동 감지**)로 핑을 보내 **실제 터널 트래픽**을 만든다.
 
 - ⚠️ 핑 대상은 반드시 **터널 너머의 IP**(게이트웨이 등)여야 한다. 로컬 터널 IP(`10.0.0.4`)로
   핑하면 패킷이 터널을 타지 않아 유휴 타이머가 리셋되지 않는다.
@@ -90,7 +90,7 @@ naver-vpn-keepalive start     # 수동 시작
 |------|--------|------|
 | `KEEPALIVE` | `1` | 연결 후 자동 시작 (0 이면 비활성) |
 | `KEEPALIVE_INTERVAL` | `60` | 핑 주기(초) |
-| `KEEPALIVE_HOST` | `10.0.0.1` | 핑 대상(터널 너머 게이트웨이) |
+| `KEEPALIVE_HOST` | `(자동)` | 핑 대상. 비우면 터널 게이트웨이 자동 감지 |
 | `KEEPALIVE_FAILS` | `3` | 연속 실패 N회면 종료 |
 
 로그: `~/.config/naver-vpn/keepalive.log`
@@ -166,7 +166,7 @@ vpn                  # 또는 naver-vpn
 
 1. `▶ 로그인 요청 중...` → 잠시 후 **휴대폰으로 OTP 문자** 도착
 2. `▶ 문자로 받은 OTP 입력:` 에 숫자 입력
-3. `✅ VPN 연결 완료 — 10.0.0.4 접근 가능`
+3. `✅ 연결 완료 — <할당된 터널 IP> (사람마다 다름, 자동 감지)`
 4. keepalive 자동 시작 → 이후 유휴로 끊기지 않음 (`naver-vpn-keepalive status` 로 확인)
 
 문자가 이미 도착해 있으면 한 번에:
@@ -193,11 +193,11 @@ vpn 204767
    › VPN 아이디 [migmig01]:
    › 포털 도메인 [https://sslvpn-kr-vpc-01.gov-ncloud.com:8443]:
    › 프로필 파일명 [vpn2033.ovpn]:
-   › 연결확인 IP [10.0.0.4]:
+   ℹ️  터널 IP·게이트웨이는 사람마다 달라 자동 감지합니다 (입력 불필요)
 
 🔁 keepalive (유휴 끊김 방지)
    › 사용하시겠어요? (Y/n) [Y]:
-   › 핑 대상(게이트웨이) [10.0.0.1]:
+   › 핑 대상 게이트웨이 (비우면 자동) [자동]:
    › 주기(초) [60]:
 
 ✅ 설정 저장: ~/.config/naver-vpn/config
@@ -287,10 +287,12 @@ vpn 204767
 │  📱 문자로 받은 OTP 입력: 204767
 │  🔌 VPN 연결 중…
 │  ⏳ 연결 확인 중…
-│  ✅ 연결 완료 — 10.0.0.4 접근 가능
+│  ✅ 연결 완료 — 10.0.0.4 (터널 IP 할당)
 │  🔁 keepalive 시작  60s → 10.0.0.1
 ╰──────────────────────────────────────────────
 ```
+
+> 위 예시의 `10.0.0.4`(터널 IP)·`10.0.0.1`(게이트웨이)는 **사람마다 다르다** — 스크립트가 자동 감지하므로 설정에 적을 필요가 없다.
 
 ---
 
@@ -351,7 +353,7 @@ make purge       # 위 + ~/.config/naver-vpn 및 키체인 비밀번호까지 �
 | 맥 비밀번호 창이 뜸 | NOPASSWD 미설치 → `make install`. (`make status` 로 sudoers 확인) |
 | `command not found: vpn` | `/usr/local/bin` 이 PATH 에 없거나 `~/.zshrc` 의 옛 `alias vpn` 이 가림. |
 | `jq 가 필요합니다` | `brew install jq` |
-| 연결은 됐는데 `❌` 표시 | `TARGET` IP 가 환경과 다름 → `make setup` 에서 수정. `make status` 로 utun 확인. |
+| 연결은 됐는데 `❌` 표시 | 드묾 — `make status` 로 utun 확인. openvpn 로그(`vpn.log`)에 `Initialization Sequence Completed` 있는지 확인. |
 | 그래도 유휴로 끊김 | keepalive 동작 확인(`naver-vpn-keepalive status`). 주기를 줄이거나(`KEEPALIVE_INTERVAL`) `KEEPALIVE_HOST` 를 터널 너머 응답 IP로. 로그: `~/.config/naver-vpn/keepalive.log` |
 
 로그: `~/Library/Application Support/ncurion-sa-client/vpn/vpn.log`

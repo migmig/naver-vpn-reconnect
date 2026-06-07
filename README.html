@@ -139,7 +139,8 @@
   <!-- 터미널 미리보기 -->
   <section>
     <h2><span class="em">🖥️</span> 터미널 미리보기</h2>
-    <p class="sub">실제 출력 — 프레임 · 아이콘 · 색으로 한눈에. (파이프하거나 <code>NO_COLOR=1</code> 이면 색 없이)</p>
+    <p class="sub">실제 출력 — 프레임 · 아이콘 · 색으로 한눈에. (파이프하거나 <code>NO_COLOR=1</code> 이면 색 없이)<br>
+      <small>※ 아래 <code>10.0.0.4</code>(터널 IP)·<code>10.0.0.1</code>(게이트웨이)는 <b>사람마다 다르며 자동 감지</b>된다.</small></p>
 
     <div class="term">
       <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>make</span></div>
@@ -168,7 +169,7 @@
 <span class="d">│</span>  📱 <span class="b">문자로 받은 OTP 입력</span>: 204767
 <span class="d">│</span>  🔌 VPN 연결 중…
 <span class="d">│</span>  ⏳ 연결 확인 중…
-<span class="d">│</span>  ✅ 연결 완료 — <span class="b g">10.0.0.4</span> 접근 가능
+<span class="d">│</span>  ✅ 연결 완료 — <span class="b g">10.0.0.4</span> <span class="d">(터널 IP 할당)</span>
 <span class="d">│</span>  🔁 keepalive 시작  <span class="d">60s → 10.0.0.1</span>
 <span class="d">╰──────────────────────────────────────────────</span></pre>
       </div>
@@ -285,7 +286,7 @@
     <div class="cards c2">
       <div class="card">
         <div class="ic">🛰️</div><h4>어떻게</h4>
-        <p>연결 후 데몬이 주기마다 터널 너머 게이트웨이(<code>10.0.0.1</code>)로 핑을 보내 트래픽을 유지한다. openvpn이 죽거나 핑이 연속 실패하면 스스로 종료.</p>
+        <p>연결 후 데몬이 주기마다 터널 너머 게이트웨이(<b>자동 감지</b>, 예 <code>10.0.0.1</code>)로 핑을 보내 트래픽을 유지한다. openvpn이 죽거나 핑이 연속 실패하면 스스로 종료.</p>
       </div>
       <div class="card">
         <div class="ic">⚠️</div><h4>주의</h4>
@@ -296,7 +297,7 @@
       <tr><th>설정</th><th>기본</th><th>설명</th></tr>
       <tr><td><code>KEEPALIVE</code></td><td>1</td><td>연결 후 자동 시작 (0=끔)</td></tr>
       <tr><td><code>KEEPALIVE_INTERVAL</code></td><td>60</td><td>핑 주기(초)</td></tr>
-      <tr><td><code>KEEPALIVE_HOST</code></td><td>10.0.0.1</td><td>핑 대상(게이트웨이)</td></tr>
+      <tr><td><code>KEEPALIVE_HOST</code></td><td>(자동)</td><td>비우면 터널 게이트웨이 자동 감지</td></tr>
       <tr><td><code>KEEPALIVE_FAILS</code></td><td>3</td><td>연속 실패 N회면 종료</td></tr>
     </table>
   </section>
