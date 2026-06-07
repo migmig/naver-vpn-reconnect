@@ -161,6 +161,35 @@ make install ALIAS=-      # 별칭 없이 (naver-vpn 만)</code></pre>
 ├──────────────────────────────────────────────
 │  🟢 VPN 연결됨
 ╰──────────────────────────────────────────────</code></pre>
+<p><code>make install</code> — 설치(별칭 선택 + 권한 안내):</p>
+<pre><code>╭─ 📦 NAVER Cloud SSL VPN 설치 ──────────────
+│  🏷 단축 명령(별칭)
+│     › 별칭 [vpn]: nvpn
+│     별칭 → nvpn
+│
+│  🔐 권한
+│     잠시 후 맥 관리자(sudo) 비밀번호를 물어볼 수 있습니다.
+│     VPN 비밀번호가 아니라, 이 컴퓨터(macOS) 로그인 암호입니다.
+│
+│  📂 설치
+│     ✅ 클라이언트  /usr/local/bin/naver-vpn (+ keepalive)
+│     ✅ 별칭        /usr/local/bin/nvpn → naver-vpn
+│     ✅ root 래퍼   /usr/local/sbin/naver-vpn-up
+│     ✅ sudoers     NOPASSWD /etc/sudoers.d/naver-vpn
+│
+├──────────────────────────────────────────────
+│  🎉 설치 완료  실행: nvpn (또는 naver-vpn)
+╰──────────────────────────────────────────────</code></pre>
+<p><code>naver-vpn</code> (또는 별칭) — 연결:</p>
+<pre><code>╭─ 📡 NAVER Cloud SSL VPN 연결 ──────────────
+│  🔐 로그인 요청 중…  휴대폰으로 OTP 문자 발송
+│  ✅ 비번 확인 · 프로필 수신  vpn2033.ovpn
+│  📱 문자로 받은 OTP 입력: 204767
+│  🔌 VPN 연결 중…
+│  ⏳ 연결 확인 중…
+│  ✅ 연결 완료 — 10.0.0.4 접근 가능
+│  🔁 keepalive 시작  60s → 10.0.0.1
+╰──────────────────────────────────────────────</code></pre>
 <hr>
 <h2>Make 명령 요약</h2>
 <table><thead><tr><th>명령</th><th>설명</th></tr></thead><tbody><tr><td><code>make setup</code></td><td>대화형 설정 — 아이디/도메인/프로필 + 키체인 비밀번호 저장 (sudo 불필요)</td></tr><tr><td><code>make install</code></td><td>클라이언트·래퍼·sudoers 설치 (필요 시 sudo 호출)</td></tr><tr><td><code>make uninstall</code></td><td>설치물 제거 (설정·키체인은 <strong>유지</strong>)</td></tr><tr><td><code>make purge</code></td><td><code>uninstall</code> + 설정파일·키체인 항목까지 삭제</td></tr><tr><td><code>make status</code></td><td>설치/설정/연결 상태 출력</td></tr><tr><td><code>make doc</code></td><td><code>README.md</code> → <code>README.html</code> 변환</td></tr><tr><td><code>make help</code></td><td>명령 목록</td></tr></tbody></table>

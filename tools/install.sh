@@ -24,7 +24,13 @@ if [ -z "${C_RESET+x}" ]; then
     C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_BLUE=$'\033[34m'; C_CYAN=$'\033[36m'
   else C_RESET=; C_BOLD=; C_DIM=; C_RED=; C_GREEN=; C_YELLOW=; C_BLUE=; C_CYAN=; fi
 fi
-hdr(){  printf '%s==>%s %s\n' "$C_BLUE"   "$C_RESET" "$*"; }
+ftop(){ printf '\n%s╭─%s %s📦 NAVER Cloud SSL VPN 설치%s %s──────────────%s\n' "$C_DIM" "$C_RESET" "$C_BOLD$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"; }
+fmid(){ printf '%s├──────────────────────────────────────────────%s\n' "$C_DIM" "$C_RESET"; }
+fbot(){ printf '%s╰──────────────────────────────────────────────%s\n\n' "$C_DIM" "$C_RESET"; }
+line(){ printf '%s│%s  %s\n' "$C_DIM" "$C_RESET" "$*"; }
+sec(){  printf '%s│%s  %s%s %s%s\n' "$C_DIM" "$C_RESET" "$C_BOLD$C_CYAN" "$1" "$2" "$C_RESET"; }
+bar(){  printf '%s│%s\n' "$C_DIM" "$C_RESET"; }
+dim(){  printf '%s%s%s' "$C_DIM" "$1" "$C_RESET"; }
 okm(){  printf '%s✅ %s%s\n'  "$C_GREEN"  "$*" "$C_RESET"; }
 warn(){ printf '%s⚠️  %s%s\n' "$C_YELLOW" "$*" "$C_RESET"; }
 errm(){ printf '%s❌ %s%s\n'  "$C_RED"    "$*" "$C_RESET"; }
@@ -36,10 +42,15 @@ errm(){ printf '%s❌ %s%s\n'  "$C_RED"    "$*" "$C_RESET"; }
 CUR_ALIAS="vpn"
 [ -f "$CONF" ] && CUR_ALIAS="$( . "$CONF" 2>/dev/null; echo "${ALIAS:-vpn}" )"
 ALIAS_NAME="${ALIAS:-}"
+
+ftop
+# ---- 별칭 ----
+sec "🏷" "단축 명령(별칭)"
 if [ -z "$ALIAS_NAME" ]; then
   if [ -t 0 ]; then
-    printf '%s단축 명령(alias) 이름을 정하세요.%s %s'\''naver-vpn'\'' 은 항상 설치되며, 이건 추가 별칭입니다.%s\n' "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
-    read -r -p "$(printf '  별칭 [%s%s%s]  (별칭 없이 가려면 '\''-'\'' 입력): ' "$C_CYAN" "$CUR_ALIAS" "$C_RESET")" ALIAS_NAME
+    line "$(dim "'naver-vpn' 은 항상 설치됩니다. 추가 별칭을 정하세요 ('-' 입력 시 없음).")"
+    printf -v _ap '%s│%s  %s›%s 별칭 %s[%s]%s: ' "$C_DIM" "$C_RESET" "$C_CYAN" "$C_RESET" "$C_DIM" "$CUR_ALIAS" "$C_RESET"
+    read -r -p "$_ap" ALIAS_NAME
     ALIAS_NAME="${ALIAS_NAME:-$CUR_ALIAS}"
   else
     ALIAS_NAME="$CUR_ALIAS"
@@ -50,48 +61,50 @@ if [ "$ALIAS_NAME" = "-" ]; then
   ALIAS_NAME=""
 else
   case "$ALIAS_NAME" in
-    naver-vpn|naver-vpn-keepalive) errm "'$ALIAS_NAME' 는 기본 명령과 충돌합니다. 다른 이름을 쓰세요."; exit 1 ;;
-    *[!a-zA-Z0-9_-]*|"") errm "별칭은 영문/숫자/_/- 만 사용할 수 있습니다."; exit 1 ;;
+    naver-vpn|naver-vpn-keepalive) line "❌ '$ALIAS_NAME' 는 기본 명령과 충돌합니다."; fbot; exit 1 ;;
+    *[!a-zA-Z0-9_-]*|"") line "❌ 별칭은 영문/숫자/_/- 만 가능합니다."; fbot; exit 1 ;;
   esac
-  # 우리 심볼릭이 아닌 동일 이름 명령이 이미 있으면 경고
   if command -v "$ALIAS_NAME" >/dev/null 2>&1; then
     existing="$(command -v "$ALIAS_NAME")"
     if ! { [ -L "$existing" ] && [ "$(readlink "$existing")" = "naver-vpn" ]; }; then
-      warn "이미 '$ALIAS_NAME' 명령이 존재합니다: $existing — 덮어쓰지 않고 진행합니다(아래 PATH 우선순위 주의)."
+      line "⚠️  이미 '$ALIAS_NAME' 명령 존재 $(dim "$existing — 덮어쓰지 않음")"
     fi
   fi
 fi
+[ -n "$ALIAS_NAME" ] && line "$(dim "별칭 →") $C_CYAN${ALIAS_NAME}$C_RESET" || line "$(dim "별칭 없이 설치")"
+
+# ---- 권한 안내 ----
+bar
+sec "🔐" "권한"
+line "$(dim "잠시 후 ")맥 관리자(sudo) 비밀번호$(dim "를 물어볼 수 있습니다.")"
+line "$(dim "VPN 비밀번호가 아니라, 이 컴퓨터(macOS) 로그인 암호입니다.")"
 
 # ---- 설치 ----
-printf '\n%s🔐 안내:%s 잠시 후 %s맥 관리자(sudo) 비밀번호%s를 물어볼 수 있습니다.\n' "$C_YELLOW$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
-printf '   %sVPN 비밀번호가 아니라, 이 컴퓨터(macOS)에 로그인할 때 쓰는 암호입니다.%s\n' "$C_DIM" "$C_RESET"
-
-hdr "클라이언트 설치: $BINDIR/naver-vpn  (+ keepalive)"
+bar
+sec "📂" "설치"
 sudo install -d -o root -g wheel -m 0755 "$BINDIR" "$SBINDIR"
 sudo install -o root -g wheel -m 0755 "$PROJ/bin/naver-vpn"           "$BINDIR/naver-vpn"
 sudo install -o root -g wheel -m 0755 "$PROJ/bin/naver-vpn-keepalive" "$BINDIR/naver-vpn-keepalive"
+line "✅ 클라이언트  $(dim "$BINDIR/naver-vpn (+ keepalive)")"
 
-# 별칭(이전 이름과 다르면 옛 심볼릭 제거 후 새로 생성)
 if [ -n "$CUR_ALIAS" ] && [ "$CUR_ALIAS" != "$ALIAS_NAME" ] \
    && [ -L "$BINDIR/$CUR_ALIAS" ] && [ "$(readlink "$BINDIR/$CUR_ALIAS")" = "naver-vpn" ]; then
-  sudo rm -f "$BINDIR/$CUR_ALIAS"; hdr "옛 별칭 제거: $BINDIR/$CUR_ALIAS"
+  sudo rm -f "$BINDIR/$CUR_ALIAS"; line "✅ 옛 별칭 제거  $(dim "$BINDIR/$CUR_ALIAS")"
 fi
 if [ -n "$ALIAS_NAME" ]; then
-  sudo ln -sf naver-vpn "$BINDIR/$ALIAS_NAME"; hdr "별칭 생성: $BINDIR/$ALIAS_NAME → naver-vpn"
-else
-  hdr "별칭 없이 설치 (naver-vpn 명령만 사용)"
+  sudo ln -sf naver-vpn "$BINDIR/$ALIAS_NAME"; line "✅ 별칭        $(dim "$BINDIR/$ALIAS_NAME → naver-vpn")"
 fi
 
-hdr "root 래퍼 설치: $SBINDIR/naver-vpn-up  (HOME=$HOMEDIR)"
 sed "s#@HOME@#$HOMEDIR#g" "$PROJ/sbin/naver-vpn-up.in" > /tmp/naver-vpn-up.gen
 sudo install -o root -g wheel -m 0755 /tmp/naver-vpn-up.gen "$SBINDIR/naver-vpn-up"
 rm -f /tmp/naver-vpn-up.gen
+line "✅ root 래퍼   $(dim "$SBINDIR/naver-vpn-up")"
 
-hdr "sudoers 설치: $SUDOERSD/naver-vpn  (user=$REALUSER)"
 sed "s#@USER@#$REALUSER#g" "$PROJ/etc/naver-vpn.sudoers.in" > /tmp/naver-vpn.sudoers.gen
-sudo visudo -cf /tmp/naver-vpn.sudoers.gen
+sudo visudo -cf /tmp/naver-vpn.sudoers.gen >/dev/null
 sudo install -o root -g wheel -m 0440 /tmp/naver-vpn.sudoers.gen "$SUDOERSD/naver-vpn"
 rm -f /tmp/naver-vpn.sudoers.gen
+line "✅ sudoers     $(dim "NOPASSWD $SUDOERSD/naver-vpn")"
 
 # ---- 선택한 별칭을 config 에 기록 ----
 mkdir -p "$CONFDIR"
@@ -105,12 +118,15 @@ else
   umask 077; printf 'ALIAS="%s"\n' "$ALIAS_NAME" > "$CONF"
 fi
 
-echo ""
-okm "설치 완료."
-[ -f "$CONF" ] && grep -q '^VPN_USER=' "$CONF" || warn "아직 설정이 없습니다 — 'make setup' 을 실행하세요."
-if grep -qs 'alias[[:space:]]\+vpn' "$HOMEDIR/.zshrc"; then
-  warn "~/.zshrc 의 'alias vpn' 이 $BINDIR 의 명령보다 우선합니다. 그 줄을 지우세요."
+# ---- 마무리 ----
+bar
+{ [ -f "$CONF" ] && grep -q '^VPN_USER=' "$CONF"; } || line "⚠️  아직 설정이 없습니다 — $C_CYAN make setup$C_RESET 을 실행하세요."
+grep -qs 'alias[[:space:]]\+vpn' "$HOMEDIR/.zshrc" && line "⚠️  ~/.zshrc 의 'alias vpn' 이 우선합니다 — 그 줄을 지우세요."
+case ":$PATH:" in *":$BINDIR:"*) ;; *) line "⚠️  $BINDIR 가 PATH 에 없습니다.";; esac
+fmid
+if [ -n "$ALIAS_NAME" ]; then
+  printf '%s│%s  %s🎉 설치 완료%s  %s실행:%s %s%s%s %s(또는 naver-vpn)%s\n' "$C_DIM" "$C_RESET" "$C_GREEN$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET" "$C_CYAN" "$ALIAS_NAME" "$C_RESET" "$C_DIM" "$C_RESET"
+else
+  printf '%s│%s  %s🎉 설치 완료%s  %s실행: naver-vpn%s\n' "$C_DIM" "$C_RESET" "$C_GREEN$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
 fi
-case ":$PATH:" in *":$BINDIR:"*) ;; *) warn "$BINDIR 가 PATH 에 없습니다. 전체경로로 실행하거나 PATH 에 추가하세요.";; esac
-if [ -n "$ALIAS_NAME" ]; then printf '   %s실행:%s  %s%s%s   (또는 naver-vpn)\n' "$C_DIM" "$C_RESET" "$C_CYAN" "$ALIAS_NAME" "$C_RESET"
-else printf '   %s실행:%s  %snaver-vpn%s\n' "$C_DIM" "$C_RESET" "$C_CYAN" "$C_RESET"; fi
+fbot
