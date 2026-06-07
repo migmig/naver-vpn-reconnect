@@ -85,8 +85,10 @@
   .note .h{font-weight:700;margin-bottom:3px}
 
   .tree{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
-    font-family:ui-monospace,monospace;font-size:13px;line-height:1.7;color:var(--muted);box-shadow:var(--shadow);overflow-x:auto}
-  .tree b{color:var(--ink)}
+    font-family:ui-monospace,monospace;font-size:13px;line-height:1.7;color:var(--muted);box-shadow:var(--shadow);
+    overflow-x:auto;white-space:pre;tab-size:2}
+  .tree b{color:var(--ink);font-weight:600}
+  .tree .cm{color:var(--brand-d)}
 
   footer{padding:28px 0 50px;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line)}
   .kbd{font-family:ui-monospace,monospace;background:var(--card);border:1px solid var(--line);
@@ -332,17 +334,15 @@
   <!-- 파일 구성 -->
   <section>
     <h2><span class="em">📁</span> 파일 구성</h2>
-    <div class="tree">
-<b>work/naver-vpn/</b>
-├── <b>Makefile</b>                 설치/제거/상태/문서
-├── <b>README.md</b> / <b>README.html</b>  문서(HTML은 직접 작성)
-├── <b>config.example</b>
-├── bin/<b>naver-vpn</b>            CLI 클라이언트
-├── bin/<b>naver-vpn-keepalive</b>  유휴 끊김 방지 데몬
-├── sbin/<b>naver-vpn-up.in</b>     root 래퍼 템플릿
-├── etc/<b>naver-vpn.sudoers.in</b> NOPASSWD 규칙 템플릿
-└── tools/ <span class="d">setup.sh · install.sh · uninstall.sh · status.sh</span>
-    </div>
+    <div class="tree"><b>work/naver-vpn/</b>
+├── <b>Makefile</b>                  <span class="cm">설치 / 제거 / 상태 / 문서</span>
+├── <b>README.md</b> / <b>README.html</b>   <span class="cm">문서 (HTML은 직접 작성)</span>
+├── <b>config.example</b>            <span class="cm">설정 예시</span>
+├── bin/<b>naver-vpn</b>             <span class="cm">CLI 클라이언트</span>
+├── bin/<b>naver-vpn-keepalive</b>   <span class="cm">유휴 끊김 방지 데몬</span>
+├── sbin/<b>naver-vpn-up.in</b>      <span class="cm">root 래퍼 템플릿</span>
+├── etc/<b>naver-vpn.sudoers.in</b>  <span class="cm">NOPASSWD 규칙 템플릿</span>
+└── tools/                    <span class="cm">setup · install · uninstall · status .sh</span></div>
   </section>
 
 </main>
