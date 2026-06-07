@@ -16,10 +16,21 @@ if [ -z "${C_RESET+x}" ]; then
     C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_CYAN=$'\033[36m'
   else C_RESET=; C_BOLD=; C_DIM=; C_RED=; C_GREEN=; C_YELLOW=; C_CYAN=; fi
 fi
-okm(){  printf '%s✅ %s%s\n'  "$C_GREEN"  "$*" "$C_RESET"; }
-warn(){ printf '%s⚠️  %s%s\n' "$C_YELLOW" "$*" "$C_RESET"; }
-errm(){ printf '%s❌ %s%s\n'  "$C_RED"    "$*" "$C_RESET"; }
-info(){ printf '%sℹ️  %s%s\n' "$C_CYAN"   "$*" "$C_RESET"; }
+okm(){   printf '%s✅ %s%s\n'  "$C_GREEN"  "$*" "$C_RESET"; }
+warn(){  printf '%s⚠️  %s%s\n' "$C_YELLOW" "$*" "$C_RESET"; }
+errm(){  printf '%s❌ %s%s\n'  "$C_RED"    "$*" "$C_RESET"; }
+info(){  printf '%s   ℹ️  %s%s\n' "$C_CYAN"   "$*" "$C_RESET"; }
+sec(){   printf '\n%s%s %s%s\n' "$C_BOLD$C_CYAN" "$1" "$2" "$C_RESET"; }
+# ask <var> <label> <default>
+ask(){
+  local _p
+  if [ -n "${3:-}" ]; then
+    printf -v _p '   %s›%s %s %s[%s]%s: ' "$C_CYAN" "$C_RESET" "$2" "$C_DIM" "$3" "$C_RESET"
+  else
+    printf -v _p '   %s›%s %s: ' "$C_CYAN" "$C_RESET" "$2"
+  fi
+  read -r -p "$_p" "$1"
+}
 
 # 기존 설정 있으면 기본값으로 활용
 OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_TGT=""; OLD_ALIAS=""
@@ -38,27 +49,34 @@ DEF_TGT="${OLD_TGT:-10.0.0.4}"
 PROFD="$HOME/Library/Application Support/ncurion-sa-client/vpn/profiles"
 DETECTED_OVPN="$(ls -t "$PROFD"/*.ovpn 2>/dev/null | head -1 | xargs -I{} basename {} 2>/dev/null || true)"
 DEF_OVPN="${OLD_OVPN:-${DETECTED_OVPN:-vpn2033.ovpn}}"
+
+# ---- 상단 프레임 ----
+printf '\n%s╭─%s %s📡 NAVER Cloud SSL VPN 설정%s %s──────────────%s\n' "$C_DIM" "$C_RESET" "$C_BOLD$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
+printf '%s│%s  %s설정 파일과 키체인 비밀번호를 만듭니다.%s\n' "$C_DIM" "$C_RESET" "$C_DIM" "$C_RESET"
+printf '%s╰──────────────────────────────────────────────%s\n' "$C_DIM" "$C_RESET"
+
+# ---- 기본 설정 ----
+sec "🔧" "기본 설정"
 if [ -z "${OLD_OVPN:-}" ] && [ -n "$DETECTED_OVPN" ]; then
   info "NAVER 앱 프로필에서 OVPN_NAME 자동 감지: $DETECTED_OVPN"
 elif [ -z "${OLD_OVPN:-}" ] && [ -z "$DETECTED_OVPN" ]; then
-  warn "로컬에 .ovpn 프로필이 없습니다. NAVER Cloud SSL VPN 앱으로 한 번 로그인하면"
-  printf '    프로필이 받아지고 이름을 자동 감지할 수 있습니다. (계정별 식별자, 예: vpnXXXX.ovpn)\n'
+  warn "로컬에 .ovpn 프로필이 없습니다 — NAVER 앱으로 한 번 로그인하면 자동 감지됩니다."
 fi
-
-printf '%s%s════════════════ NAVER VPN 설정 ════════════════%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
-read -r -p "VPN 아이디${OLD_USER:+ [$OLD_USER]}: " VU; VU="${VU:-$OLD_USER}"
+ask VU "VPN 아이디"   "$OLD_USER"; VU="${VU:-$OLD_USER}"
 [ -n "$VU" ] || { errm "아이디는 필수입니다."; exit 1; }
-read -r -p "포털 도메인 [$DEF_DOM]: " DM; DM="${DM:-$DEF_DOM}"
-read -r -p "프로필 파일명 [$DEF_OVPN]: " OV; OV="${OV:-$DEF_OVPN}"
-read -r -p "연결확인 IP [$DEF_TGT]: " TG; TG="${TG:-$DEF_TGT}"
+ask DM "포털 도메인"   "$DEF_DOM";  DM="${DM:-$DEF_DOM}"
+ask OV "프로필 파일명" "$DEF_OVPN"; OV="${OV:-$DEF_OVPN}"
+ask TG "연결확인 IP"   "$DEF_TGT";  TG="${TG:-$DEF_TGT}"
 
+# ---- keepalive ----
+sec "🔁" "keepalive (유휴 끊김 방지)"
 OLD_KA="${KEEPALIVE:-1}"; OLD_KAH="${KEEPALIVE_HOST:-10.0.0.1}"; OLD_KAI="${KEEPALIVE_INTERVAL:-60}"
-read -r -p "유휴 끊김 방지(keepalive) 사용? [Y/n]: " KA
+ask KA "사용하시겠어요? (Y/n)" "$([ "$OLD_KA" = 0 ] && echo n || echo Y)"
 case "${KA:-y}" in [Nn]*) KAV="0";; *) KAV="1";; esac
 KAH="$OLD_KAH"; KAI="$OLD_KAI"
 if [ "$KAV" = "1" ]; then
-  read -r -p "  keepalive 핑 대상(게이트웨이) [$OLD_KAH]: " KAH; KAH="${KAH:-$OLD_KAH}"
-  read -r -p "  keepalive 주기(초) [$OLD_KAI]: " KAI; KAI="${KAI:-$OLD_KAI}"
+  ask KAH "핑 대상(게이트웨이)" "$OLD_KAH"; KAH="${KAH:-$OLD_KAH}"
+  ask KAI "주기(초)"            "$OLD_KAI"; KAI="${KAI:-$OLD_KAI}"
 fi
 
 umask 077
@@ -83,11 +101,16 @@ KEEPALIVE_HOST="$KAH"
 KEEPALIVE_FAILS="3"
 EOF
 chmod 600 "$CONF"
+echo
 okm "설정 저장: $CONF"
-echo
 
-printf '%sVPN 비밀번호를 키체인에 저장합니다%s (입력은 화면에 보이지 않음, 두 번 입력).\n' "$C_BOLD" "$C_RESET"
+# ---- 비밀번호 ----
+sec "🔑" "비밀번호"
+printf '   %s키체인에 저장합니다 (입력은 화면에 안 보이고, 두 번 입력)%s\n' "$C_DIM" "$C_RESET"
 security add-generic-password -U -s naver-vpn -a "$VU" -w
-okm "비밀번호 저장 완료 (키체인 서비스 'naver-vpn', 계정 '$VU')"
-echo
-printf '%s다음 단계:%s %smake install%s %s→%s  naver-vpn 으로 연결\n' "$C_BOLD" "$C_RESET" "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
+okm "비밀번호 저장 완료 $(printf '%s(키체인 naver-vpn / %s)%s' "$C_DIM" "$VU" "$C_RESET")"
+
+# ---- 마무리 ----
+printf '\n%s├──────────────────────────────────────────────%s\n' "$C_DIM" "$C_RESET"
+printf '%s│%s  %s▶ 다음 단계%s  %smake install%s %s→%s  naver-vpn 으로 연결\n' "$C_DIM" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
+printf '%s╰──────────────────────────────────────────────%s\n\n' "$C_DIM" "$C_RESET"

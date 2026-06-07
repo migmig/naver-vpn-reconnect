@@ -99,6 +99,32 @@ make install ALIAS=-      # 별칭 없이 (naver-vpn 만)</code></pre>
 <hr>
 <h2>화면 예시</h2>
 <p>실제 출력은 색이 입혀져 나온다(터미널 기준; 파이프하거나 <code>NO_COLOR=1</code> 이면 색 제거).</p>
+<p><code>make setup</code> — 대화형 설정:</p>
+<pre><code>╭─ 📡 NAVER Cloud SSL VPN 설정 ──────────────
+│  설정 파일과 키체인 비밀번호를 만듭니다.
+╰──────────────────────────────────────────────
+
+🔧 기본 설정
+   ℹ️  NAVER 앱 프로필에서 OVPN_NAME 자동 감지: vpn2033.ovpn
+   › VPN 아이디 [migmig01]:
+   › 포털 도메인 [https://sslvpn-kr-vpc-01.gov-ncloud.com:8443]:
+   › 프로필 파일명 [vpn2033.ovpn]:
+   › 연결확인 IP [10.0.0.4]:
+
+🔁 keepalive (유휴 끊김 방지)
+   › 사용하시겠어요? (Y/n) [Y]:
+   › 핑 대상(게이트웨이) [10.0.0.1]:
+   › 주기(초) [60]:
+
+✅ 설정 저장: ~/.config/naver-vpn/config
+
+🔑 비밀번호
+   키체인에 저장합니다 (입력은 화면에 안 보이고, 두 번 입력)
+✅ 비밀번호 저장 완료 (키체인 naver-vpn / migmig01)
+
+├──────────────────────────────────────────────
+│  ▶ 다음 단계  make install →  naver-vpn 으로 연결
+╰──────────────────────────────────────────────</code></pre>
 <p><code>make</code> (인자 없이) — 명령 안내:</p>
 <pre><code>╭─ 📡 NAVER Cloud SSL VPN 재연결 ──────────────
 │  터미널 재연결 · 키체인 비번 · 문자 OTP · keepalive
