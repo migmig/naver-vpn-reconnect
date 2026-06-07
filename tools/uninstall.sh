@@ -16,11 +16,12 @@ CONF="$CONFDIR/config"
 
 if [ -z "${C_RESET+x}" ]; then
   if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_BLUE=$'\033[34m'
-  else C_RESET=; C_GREEN=; C_BLUE=; fi
+    C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_BLUE=$'\033[34m'
+  else C_RESET=; C_BOLD=; C_DIM=; C_GREEN=; C_YELLOW=; C_BLUE=; fi
 fi
 hdr(){ printf '%s==>%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
 
+printf '%s🔐 안내:%s 잠시 후 %s맥 관리자(sudo) 비밀번호%s를 물어볼 수 있습니다 %s(이 컴퓨터 로그인 암호)%s\n' "$C_YELLOW$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
 hdr "설치물 제거"
 
 # keepalive 중지

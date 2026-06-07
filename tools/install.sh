@@ -63,6 +63,9 @@ else
 fi
 
 # ---- 설치 ----
+printf '\n%s🔐 안내:%s 잠시 후 %s맥 관리자(sudo) 비밀번호%s를 물어볼 수 있습니다.\n' "$C_YELLOW$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
+printf '   %sVPN 비밀번호가 아니라, 이 컴퓨터(macOS)에 로그인할 때 쓰는 암호입니다.%s\n' "$C_DIM" "$C_RESET"
+
 hdr "클라이언트 설치: $BINDIR/naver-vpn  (+ keepalive)"
 sudo install -d -o root -g wheel -m 0755 "$BINDIR" "$SBINDIR"
 sudo install -o root -g wheel -m 0755 "$PROJ/bin/naver-vpn"           "$BINDIR/naver-vpn"
