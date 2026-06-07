@@ -303,7 +303,7 @@ vpn 204767
 | `make uninstall` | 설치물 제거 (설정·키체인은 **유지**) |
 | `make purge` | `uninstall` + 설정파일·키체인 항목까지 삭제 |
 | `make status` | 설치/설정/연결 상태 출력 |
-| `make doc` | `README.md` → `README.html` 변환 |
+| `make doc` | `README.html`(직접 작성한 문서) 브라우저로 열기 |
 | `make help` | 명령 목록 |
 
 비밀번호만 다시 바꾸려면:
@@ -373,6 +373,7 @@ work/naver-vpn/
     ├── setup.sh             대화형 설정
     ├── install.sh           설치 (별칭 선택 포함)
     ├── uninstall.sh         제거
-    ├── status.sh            상태 출력
-    └── md2html.py           Markdown→HTML 변환기
+    └── status.sh            상태 출력
+
+> `README.html` 은 자동 변환본이 아니라 **직접 디자인한 문서**다. `make doc` 으로 브라우저에서 연다.
 ```

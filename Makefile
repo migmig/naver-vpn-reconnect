@@ -80,13 +80,9 @@ status:
 	@bash tools/status.sh $(BINDIR) $(SBINDIR) $(SUDOERSD)
 
 # ---- 문서 ----
-doc: README.html
-README.html: README.md tools/md2html.py
-	@if command -v pandoc >/dev/null 2>&1; then \
-	  pandoc -s --metadata title="NAVER VPN Reconnect" -o README.html README.md; \
-	else \
-	  python3 tools/md2html.py README.md README.html; \
-	fi
-	@printf '$(C_GREEN)✅ README.html 생성됨$(C_RESET)\n'
+# README.html 은 직접 작성/유지하는 파일이다(자동 생성하지 않음). 그냥 연다.
+doc:
+	@open README.html 2>/dev/null && printf '$(C_GREEN)✅ README.html 열기$(C_RESET)\n' \
+	  || printf '$(C_DIM)README.html: %s/README.html$(C_RESET)\n' "$$PWD"
 
 .PHONY: help setup install uninstall purge status doc
