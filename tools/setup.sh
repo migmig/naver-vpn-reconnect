@@ -33,16 +33,15 @@ ask(){
 }
 
 # 기존 설정 있으면 기본값으로 활용
-OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_TGT=""; OLD_ALIAS=""
+OLD_USER=""; OLD_DOM=""; OLD_OVPN=""; OLD_ALIAS=""
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
   . "$CONF" || true
-  OLD_USER="${VPN_USER:-}"; OLD_DOM="${DOMAIN:-}"; OLD_OVPN="${OVPN_NAME:-}"; OLD_TGT="${TARGET:-}"; OLD_ALIAS="${ALIAS:-}"
+  OLD_USER="${VPN_USER:-}"; OLD_DOM="${DOMAIN:-}"; OLD_OVPN="${OVPN_NAME:-}"; OLD_ALIAS="${ALIAS:-}"
 fi
 ALIAS_VAL="${OLD_ALIAS:-vpn}"   # 별칭 이름은 'make install' 에서 정함; 여기선 기존값 보존
 
 DEF_DOM="${OLD_DOM:-https://sslvpn-kr-vpc-01.gov-ncloud.com:8443}"
-DEF_TGT="${OLD_TGT:-10.0.0.4}"
 
 # 프로필 이름(OVPN_NAME)은 계정별 식별자다. 기존 설정 → NAVER 앱이 받아둔
 # 로컬 프로필 → 마지막 폴백 순으로 기본값을 정한다.

@@ -11,8 +11,10 @@
 #   $1 = 프로필 파일명 (basename, 예: vpn2033.ovpn — 슬래시/공백 불가)
 #   $2 = 인증파일 경로 (/tmp/naver-vpn-auth.* )
 #
-# openvpn 설정 디렉토리를 코드에 고정하므로, 이 NOPASSWD 권한으로는 임의의
-# openvpn 설정(=--up 스크립트로 root 명령 실행)을 돌릴 수 없다.
+# 프로필 디렉토리는 일반 사용자가 쓰기 가능하므로, .ovpn 내용을 검증해
+# root 코드 실행을 유발하는 지시어(up/plugin/script-security 등)가 든 설정을
+# 거부한다. 검증은 root 소유 임시 복사본에 수행해 검사-실행 사이
+# 바꿔치기(TOCTOU)도 막는다. 이 검증이 없으면 NOPASSWD 가 곧 root 셸이 된다.
 # 절대 직접 수정하지 말 것 — 'make install' 로 재생성된다 (@HOME@ 치환).
 #
 set -eu
@@ -40,6 +42,19 @@ CONFIG="$PROFDIR/$NAME"
 [ -f "$AUTH" ]   || { echo "naver-vpn-up: auth file not found" >&2; exit 1; }
 [ -x "$OVPN" ]   || { echo "naver-vpn-up: openvpn not found" >&2; exit 1; }
 
+# root 소유 임시 복사본 생성(/tmp 는 sticky — 일반 사용자가 못 건드림) 후
+# 외부 프로그램 실행을 유발하는 지시어가 있으면 거부. openvpn 도 이 복사본으로 실행.
+SAFE="$(mktemp /tmp/naver-vpn-conf.XXXXXX)"
+trap 'rm -f "$SAFE"' EXIT
+cat "$CONFIG" > "$SAFE"
+# management 는 NAVER 정식 프로필이 쓰는 지시어(로컬 제어 채널)라 차단하지 않는다.
+BAD='^[[:space:]]*(script-security|up|down|route-up|route-pre-down|ipchange|iproute|client-connect|client-disconnect|learn-address|auth-user-pass-verify|tls-verify|plugin|config)([[:space:]]|$)'
+if LC_ALL=C grep -Eq "$BAD" "$SAFE"; then
+  echo "naver-vpn-up: profile contains a forbidden directive (would execute code as root)" >&2
+  exit 1
+fi
+
 pkill -f 'vpn/openvpn' 2>/dev/null || true
 sleep 1
-exec "$OVPN" --config "$CONFIG" --auth-user-pass "$AUTH" --auth-nocache --daemon --log "$LOG"
+# --daemon 은 설정을 다 읽은 뒤 분기하므로, 리턴 후 임시 복사본을 지워도 안전하다.
+"$OVPN" --config "$SAFE" --auth-user-pass "$AUTH" --auth-nocache --daemon --log "$LOG"

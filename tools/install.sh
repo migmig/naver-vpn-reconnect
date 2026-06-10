@@ -95,15 +95,17 @@ if [ -n "$ALIAS_NAME" ]; then
   sudo ln -sf naver-vpn "$BINDIR/$ALIAS_NAME"; line "✅ 별칭        $(dim "$BINDIR/$ALIAS_NAME → naver-vpn")"
 fi
 
-sed "s#@HOME@#$HOMEDIR#g" "$PROJ/sbin/naver-vpn-up.in" > /tmp/naver-vpn-up.gen
-sudo install -o root -g wheel -m 0755 /tmp/naver-vpn-up.gen "$SBINDIR/naver-vpn-up"
-rm -f /tmp/naver-vpn-up.gen
+GEN="$(mktemp /tmp/naver-vpn-up.XXXXXX)"
+sed "s#@HOME@#$HOMEDIR#g" "$PROJ/sbin/naver-vpn-up.in" > "$GEN"
+sudo install -o root -g wheel -m 0755 "$GEN" "$SBINDIR/naver-vpn-up"
+rm -f "$GEN"
 line "✅ root 래퍼   $(dim "$SBINDIR/naver-vpn-up")"
 
-sed "s#@USER@#$REALUSER#g" "$PROJ/etc/naver-vpn.sudoers.in" > /tmp/naver-vpn.sudoers.gen
-sudo visudo -cf /tmp/naver-vpn.sudoers.gen >/dev/null
-sudo install -o root -g wheel -m 0440 /tmp/naver-vpn.sudoers.gen "$SUDOERSD/naver-vpn"
-rm -f /tmp/naver-vpn.sudoers.gen
+GEN="$(mktemp /tmp/naver-vpn.sudoers.XXXXXX)"
+sed "s#@USER@#$REALUSER#g" "$PROJ/etc/naver-vpn.sudoers.in" > "$GEN"
+sudo visudo -cf "$GEN" >/dev/null
+sudo install -o root -g wheel -m 0440 "$GEN" "$SUDOERSD/naver-vpn"
+rm -f "$GEN"
 line "✅ sudoers     $(dim "NOPASSWD $SUDOERSD/naver-vpn")"
 
 # ---- 선택한 별칭을 config 에 기록 ----

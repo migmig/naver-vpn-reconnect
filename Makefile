@@ -5,7 +5,7 @@
 #   make uninstall  설치물 제거 (설정/키체인은 유지)
 #   make purge      uninstall + 설정파일/키체인까지 삭제
 #   make status     설치/설정/연결 상태 확인
-#   make doc        README.md → README.html 생성
+#   make doc        README.html 열기
 #
 PREFIX   ?= /usr/local
 BINDIR    := $(PREFIX)/bin
@@ -40,7 +40,7 @@ help:
 	@printf '$(C_DIM)│$(C_RESET)    🧹 $(C_GREEN)make uninstall$(C_RESET)  제거 (설정/키체인 유지)  $(C_YELLOW)[sudo]$(C_RESET)\n'
 	@printf '$(C_DIM)│$(C_RESET)    💥 $(C_GREEN)make purge$(C_RESET)      완전 삭제 (설정/키체인 포함)  $(C_YELLOW)[sudo]$(C_RESET)\n'
 	@printf '$(C_DIM)│$(C_RESET)    📊 $(C_GREEN)make status$(C_RESET)     설치/연결 상태 확인\n'
-	@printf '$(C_DIM)│$(C_RESET)    📄 $(C_GREEN)make doc$(C_RESET)        README.html 생성\n'
+	@printf '$(C_DIM)│$(C_RESET)    📄 $(C_GREEN)make doc$(C_RESET)        README.html 열기\n'
 	@printf '$(C_DIM)│$(C_RESET)\n'
 	@printf '$(C_DIM)├──────────────────────────────────────────────$(C_RESET)\n'
 	@printf '$(C_DIM)│$(C_RESET)  $(C_BOLD)▶ 처음이라면$(C_RESET)  $(C_CYAN)make setup$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)make install$(C_RESET) $(C_DIM)→$(C_RESET) $(C_CYAN)naver-vpn$(C_RESET)\n'
