@@ -79,6 +79,21 @@ sec "🔐" "권한"
 line "$(dim "잠시 후 ")맥 관리자(sudo) 비밀번호$(dim "를 물어볼 수 있습니다.")"
 line "$(dim "VPN 비밀번호가 아니라, 이 컴퓨터(macOS) 로그인 암호입니다.")"
 
+# sudo 자격 증명을 여기서 한 번만 받아 캐시한다. 아래 install/visudo 가 여러 번
+# sudo 를 호출하는데, 미리 받아두지 않으면 첫 호출에서 프롬프트가 뜨고 TTY 가
+# 없는 환경(비대화형 셸·일부 IDE 터미널)에서는 'a terminal is required' 로 죽는다.
+if ! sudo -v 2>/dev/null; then
+  bar
+  if [ ! -t 0 ]; then
+    line "❌ 비대화형 환경이라 sudo 비밀번호를 입력할 수 없습니다."
+    line "$(dim "터미널에서 직접 실행하세요:")  $C_CYAN make install$C_RESET"
+  else
+    line "❌ sudo 인증 실패 — 관리자 권한이 필요합니다."
+  fi
+  fbot
+  exit 1
+fi
+
 # ---- 설치 ----
 bar
 sec "📂" "설치"
