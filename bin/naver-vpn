@@ -46,12 +46,14 @@ DATADIR="$HOME/Library/Application Support/ncurion-sa-client/vpn"
 LOG="$DATADIR/vpn.log"
 WRAPPER="/usr/local/sbin/naver-vpn-up"
 
-# 터널에 할당된 사설 IP (사람마다 다름 — 자동 감지)
-tunnel_ip(){
+# 터널(utun*)에 할당된 사설 IPv4 목록 (사람마다 다름 — 자동 감지)
+tunnel_ips(){
   ifconfig 2>/dev/null | awk '
     /^utun[0-9]/{u=1; next} /^[a-z]/{u=0}
-    u && /inet /{ if ($2 ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/){print $2; exit} }'
+    u && /inet /{ if ($2 ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/) print $2 }'
 }
+# 첫 번째 사설 터널 IP
+tunnel_ip(){ tunnel_ips | head -1; }
 # 터널 게이트웨이 (openvpn 이 push 한 route 의 게이트웨이; 실패 시 .1 추정)
 tunnel_gw(){
   local ip="$1" gw
@@ -117,6 +119,8 @@ trap 'rm -f "$AUTH"' EXIT
 printf '%s\n%s\n' "$VPN_USER" "$OTP" > "$AUTH"
 
 # --- 5) openvpn 실행: root 래퍼(NOPASSWD) 있으면 비번 없이, 없으면 GUI 폴백 ---
+# 연결 전 터널 IP 스냅샷 — 이번 연결로 '새로' 뜬 IP 만 성공으로 인정(기존 다른 VPN 오탐 방지).
+IPS_BEFORE="$(tunnel_ips | sort -u)"
 line "🔌 VPN 연결 중…"
 if [ -x "$WRAPPER" ]; then
   sudo "$WRAPPER" "$PNAME" "$AUTH" || true
@@ -127,14 +131,19 @@ APPLESCRIPT
 fi
 sleep 2
 
-# --- 6) 연결 확인 (openvpn 로그 기반 — 개인 IP 에 의존하지 않음) ---
+# --- 6) 연결 확인 ---
+# 성공 판정은 '새 터널 IP 할당'을 1순위로 본다. openvpn 로그는 root 소유(0600)라
+# 일반 사용자가 못 읽는 경우가 있어(권한 오류가 조용히 무시됨) 로그 grep 만으로는
+# 실제 연결도 실패로 오판한다. 터널 IP 감지는 root 권한이 필요 없다.
 line "⏳ 연결 확인 중…"
-ok=0
-# 로그를 못 읽으면(root 소유 0600 등) 터널 IP 할당 여부로 대신 판정한다.
+ok=0; IP=""
+# 로그를 못 읽으면(root 소유 0600 등) 성공 후 안내만 한다 — 판정 자체는 새 터널 IP 가 1순위.
 LOGREAD=1; [ -r "$LOG" ] || LOGREAD=0
 for _ in $(seq 1 30); do
+  # 이번 연결로 새로 뜬 사설 터널 IP
+  IP="$(comm -13 <(printf '%s\n' "$IPS_BEFORE") <(tunnel_ips | sort -u) 2>/dev/null | head -1)"
+  [ -n "$IP" ] && { ok=1; break; }
   grep -q "Initialization Sequence Completed" "$LOG" 2>/dev/null && { ok=1; break; }
-  [ "$LOGREAD" = 0 ] && [ -n "$(tunnel_ip)" ] && { ok=1; break; }
   # 사용자가 TARGET 을 지정했다면 그 IP 도달도 성공으로 인정
   [ -n "$TARGET" ] && ping -c1 -t2 "$TARGET" >/dev/null 2>&1 && { ok=1; break; }
   sleep 1
@@ -142,11 +151,12 @@ done
 if [ "$ok" != 1 ]; then
   line "❌ 연결 실패  $(dim "로그: $LOG")"
   fbot
-  tail -25 "$LOG" 2>/dev/null || true
+  cat "$LOG" 2>/dev/null | tail -25 || sudo tail -25 "$LOG" 2>/dev/null || \
+    printf '   %s로그를 읽을 수 없습니다(root 소유). 확인: sudo tail -25 "%s"%s\n' "$C_DIM" "$LOG" "$C_RESET"
   exit 1
 fi
 
-IP="$(tunnel_ip)"; GW="$(tunnel_gw "$IP")"
+[ -z "$IP" ] && IP="$(tunnel_ip)"; GW="$(tunnel_gw "$IP")"
 [ "$LOGREAD" = 0 ] && line "⚠️  로그 읽기 불가 $(dim "($LOG — root 소유. 'make install' 로 래퍼를 갱신하면 해결)")"
 if [ -n "$IP" ]; then line "✅ 연결 완료 — $C_GREEN$C_BOLD${IP}$C_RESET $(dim '(터널 IP 할당)')"
 else line "✅ 연결 완료"; fi
