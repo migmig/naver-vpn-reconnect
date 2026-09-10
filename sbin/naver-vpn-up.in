@@ -42,6 +42,16 @@ CONFIG="$PROFDIR/$NAME"
 [ -f "$AUTH" ]   || { echo "naver-vpn-up: auth file not found" >&2; exit 1; }
 [ -x "$OVPN" ]   || { echo "naver-vpn-up: openvpn not found" >&2; exit 1; }
 
+# 로그 파일은 일반 사용자가 읽을 수 있어야 한다 — 클라이언트가 이 로그로 연결 성공을
+# 판정하고 keepalive 가 게이트웨이를 찾는다. 파일이 없을 때 root(openvpn) 가 만들면
+# root 소유 0600 이 되어 터널은 붙었는데 "연결 실패" 로 보이므로, 미리 사용자 소유로 만든다.
+LOGDIR="$(dirname "$LOG")"
+[ -d "$LOGDIR" ] || { echo "naver-vpn-up: log dir not found: $LOGDIR" >&2; exit 1; }
+[ -L "$LOG" ] && { echo "naver-vpn-up: log path is a symlink, refusing" >&2; exit 1; }
+[ -e "$LOG" ] || : > "$LOG"
+chown "$(stat -f '%u:%g' "$LOGDIR")" "$LOG"
+chmod 644 "$LOG"
+
 # root 소유 임시 복사본 생성(/tmp 는 sticky — 일반 사용자가 못 건드림) 후
 # 외부 프로그램 실행을 유발하는 지시어가 있으면 거부. openvpn 도 이 복사본으로 실행.
 SAFE="$(mktemp /tmp/naver-vpn-conf.XXXXXX)"

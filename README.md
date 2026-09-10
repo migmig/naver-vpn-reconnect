@@ -354,6 +354,7 @@ make purge       # 위 + ~/.config/naver-vpn 및 키체인 비밀번호까지 �
 | `command not found: vpn` | `/usr/local/bin` 이 PATH 에 없거나 `~/.zshrc` 의 옛 `alias vpn` 이 가림. |
 | `jq 가 필요합니다` | `brew install jq` |
 | 연결은 됐는데 `❌` 표시 | 드묾 — `make status` 로 utun 확인. openvpn 로그(`vpn.log`)에 `Initialization Sequence Completed` 있는지 확인. |
+| 터널은 붙었는데 `❌ 연결 실패`, `vpn.log` 가 `Permission denied` | `vpn.log` 가 root 소유(0600). 파일이 지워진 뒤 root(openvpn)가 새로 만들면 생김. `make install` 로 래퍼를 갱신하면 다음 연결부터 사용자 소유로 만든다. 즉시 해결: `sudo chown $USER ~/Library/Application\ Support/ncurion-sa-client/vpn/vpn.log` |
 | 그래도 유휴로 끊김 | keepalive 동작 확인(`naver-vpn-keepalive status`). 주기를 줄이거나(`KEEPALIVE_INTERVAL`) `KEEPALIVE_HOST` 를 터널 너머 응답 IP로. 로그: `~/.config/naver-vpn/keepalive.log` |
 
 로그: `~/Library/Application Support/ncurion-sa-client/vpn/vpn.log`

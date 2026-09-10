@@ -130,8 +130,11 @@ sleep 2
 # --- 6) 연결 확인 (openvpn 로그 기반 — 개인 IP 에 의존하지 않음) ---
 line "⏳ 연결 확인 중…"
 ok=0
+# 로그를 못 읽으면(root 소유 0600 등) 터널 IP 할당 여부로 대신 판정한다.
+LOGREAD=1; [ -r "$LOG" ] || LOGREAD=0
 for _ in $(seq 1 30); do
   grep -q "Initialization Sequence Completed" "$LOG" 2>/dev/null && { ok=1; break; }
+  [ "$LOGREAD" = 0 ] && [ -n "$(tunnel_ip)" ] && { ok=1; break; }
   # 사용자가 TARGET 을 지정했다면 그 IP 도달도 성공으로 인정
   [ -n "$TARGET" ] && ping -c1 -t2 "$TARGET" >/dev/null 2>&1 && { ok=1; break; }
   sleep 1
@@ -144,6 +147,7 @@ if [ "$ok" != 1 ]; then
 fi
 
 IP="$(tunnel_ip)"; GW="$(tunnel_gw "$IP")"
+[ "$LOGREAD" = 0 ] && line "⚠️  로그 읽기 불가 $(dim "($LOG — root 소유. 'make install' 로 래퍼를 갱신하면 해결)")"
 if [ -n "$IP" ]; then line "✅ 연결 완료 — $C_GREEN$C_BOLD${IP}$C_RESET $(dim '(터널 IP 할당)')"
 else line "✅ 연결 완료"; fi
 
