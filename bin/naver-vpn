@@ -68,10 +68,30 @@ command -v curl >/dev/null 2>&1 || { errm "curl 이 필요합니다"; exit 1; }
 [ -x "$OVPN_BIN" ] || { errm "openvpn 바이너리 없음: $OVPN_BIN (NAVER Cloud SSL VPN 앱 설치 필요)"; exit 1; }
 
 # --- 1) 키체인에서 비밀번호 ---
-PASS="$(security find-generic-password -s "$KC_SERVICE" -a "$VPN_USER" -w 2>/dev/null || true)"
-if [ -z "$PASS" ]; then
-  errm "키체인에 비밀번호가 없습니다 ($KC_SERVICE / $VPN_USER)."
-  printf '   %s'\''make setup'\'' 또는: security add-generic-password -U -s %s -a %s -w%s\n' "$C_DIM" "$KC_SERVICE" "$VPN_USER" "$C_RESET"
+# security 종료코드: 36 = errSecInteractionNotAllowed (키체인 잠김, SSH 등 GUI 없는 세션)
+#                    44 = errSecItemNotFound          (항목 없음)
+KC_LOGIN="$HOME/Library/Keychains/login.keychain-db"
+kc_read(){ security find-generic-password -s "$KC_SERVICE" -a "$VPN_USER" -w 2>/dev/null; }
+PASS=""; kc_rc=0
+PASS="$(kc_read)" || kc_rc=$?
+if [ "$kc_rc" -eq 36 ] && [ -t 0 ]; then
+  printf '%s🔒 로그인 키체인이 잠겨 있습니다 (SSH/GUI 없는 세션). 맥 로그인 비밀번호로 잠금을 풉니다.%s\n' "$C_YELLOW" "$C_RESET"
+  if security unlock-keychain "$KC_LOGIN"; then
+    kc_rc=0; PASS="$(kc_read)" || kc_rc=$?
+  fi
+fi
+if [ "$kc_rc" -ne 0 ] || [ -z "$PASS" ]; then
+  case "$kc_rc" in
+    36)
+      errm "키체인이 잠겨 있어 비밀번호를 읽지 못했습니다 ($KC_SERVICE / $VPN_USER)."
+      printf '   %s먼저 실행: security unlock-keychain %s%s\n' "$C_DIM" "$KC_LOGIN" "$C_RESET" ;;
+    44|0)
+      errm "키체인에 비밀번호가 없습니다 ($KC_SERVICE / $VPN_USER)."
+      printf '   %s'\''make setup'\'' 또는: security add-generic-password -U -s %s -a %s -w%s\n' "$C_DIM" "$KC_SERVICE" "$VPN_USER" "$C_RESET" ;;
+    *)
+      errm "키체인 조회 실패 (security 종료코드 $kc_rc, $KC_SERVICE / $VPN_USER)."
+      printf '   %s직접 확인: security find-generic-password -s %s -a %s -w%s\n' "$C_DIM" "$KC_SERVICE" "$VPN_USER" "$C_RESET" ;;
+  esac
   exit 1
 fi
 
